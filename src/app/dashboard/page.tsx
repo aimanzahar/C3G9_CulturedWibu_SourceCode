@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   ArrowPathIcon,
   BoltIcon,
@@ -9,12 +9,30 @@ import {
   MapPinIcon,
   SparklesIcon,
   TrophyIcon,
+  XMarkIcon,
+  PlayIcon,
+  PauseIcon,
+  MapIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { nanoid } from "nanoid";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import dynamic from "next/dynamic";
+import {
+  locationService,
+  type Location,
+  type LocationServiceCallbacks
+} from "../../lib/locationService";
+import {
+  airQualityService,
+  type AreaAirQualitySummary,
+  type AirQualityStation
+} from "../../lib/airQualityService";
+import type {
+  AirQualityStation as StationType
+} from "../../types/airQuality";
+import { getRadiusFromZoom, formatRadius, getZoomFromRadius } from '@/lib/radiusUtils';
 
 // Dynamically import the map to avoid SSR issues
 const AirQualityMap = dynamic(() => import("../../components/map/AirQualityMap"), {
@@ -108,6 +126,22 @@ export default function Home() {
   const [authMessage, setAuthMessage] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const passportRef = useRef<HTMLDivElement | null>(null);
+  
+  // GPS tracking states
+  const [isTrackingEnabled, setIsTrackingEnabled] = useState(false);
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
+  const [trackingFrequency, setTrackingFrequency] = useState(5000); // 5 seconds
+  const [locationHistory, setLocationHistory] = useState<Location[]>([]);
+  const [showRadius, setShowRadius] = useState(true);
+  const [radiusKm, setRadiusKm] = useState(100); // 100km radius
+  const [currentZoom, setCurrentZoom] = useState(10);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const zoomChangeTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
+  
+  // Area air quality states
+  const [areaAirQuality, setAreaAirQuality] = useState<AreaAirQualitySummary | null>(null);
+  const [nearbyStations, setNearbyStations] = useState<StationType[]>([]);
+  const [isScanningArea, setIsScanningArea] = useState(false);
 
   const login = useMutation(api.auth.login);
   const logout = useMutation(api.auth.logout);
@@ -172,20 +206,107 @@ export default function Home() {
     );
   }, [userKey, ensureProfile, profileReady, session?.user?.name]);
 
+  // GPS tracking callbacks
+  const handleLocationUpdate = useCallback((location: Location) => {
+    setCoords({
+      lat: location.lat,
+      lon: location.lng,
+      label: "Your location (tracking)",
+    });
+    setLastLocationUpdate(new Date());
+    setLocationHistory(locationService.getLocationHistory());
+    
+    // Fetch air data for new location
+    fetchAir(location.lat, location.lng);
+    
+    // If radius mode is enabled, fetch area air quality
+    if (showRadius) {
+      fetchAreaAirQuality(location.lat, location.lng);
+    }
+    
+    setStatus(`Tracking active • Last update: ${new Date().toLocaleTimeString()}`);
+  }, [showRadius]);
+
+  const handleLocationError = useCallback((error: GeolocationPositionError) => {
+    let errorMessage = "Location error";
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        errorMessage = "Location permission denied";
+        setIsTrackingEnabled(false);
+        break;
+      case error.POSITION_UNAVAILABLE:
+        errorMessage = "Location unavailable";
+        break;
+      case error.TIMEOUT:
+        errorMessage = "Location request timeout";
+        break;
+    }
+    setStatus(errorMessage);
+  }, []);
+
+  const handlePermissionDenied = useCallback(() => {
+    setStatus("Location permission denied. Enable in browser settings.");
+    setIsTrackingEnabled(false);
+  }, []);
+
+  // Start/stop GPS tracking
+  const toggleGPSTracking = useCallback(() => {
+    if (isTrackingEnabled) {
+      locationService.stopLocationTracking();
+      setIsTrackingEnabled(false);
+      setStatus("GPS tracking stopped");
+    } else {
+      locationService.startLocationTracking(
+        {
+          updateInterval: trackingFrequency,
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        },
+        {
+          onLocationUpdate: handleLocationUpdate,
+          onError: handleLocationError,
+          onPermissionDenied: handlePermissionDenied,
+        }
+      );
+      setIsTrackingEnabled(true);
+      setStatus("Starting GPS tracking…");
+    }
+  }, [
+    isTrackingEnabled,
+    trackingFrequency,
+    handleLocationUpdate,
+    handleLocationError,
+    handlePermissionDenied,
+  ]);
+
+  // Center map on current location
+  const centerMapOnLocation = useCallback(() => {
+    if (coords.lat && coords.lon) {
+      setStatus("Centering map on your location");
+      // The map component will handle centering via props
+    }
+  }, [coords]);
+
+  // Initial location fetch
   useEffect(() => {
     if (!userKey) return;
-    if (!("geolocation" in navigator)) {
+    if (!locationService.isSupported()) {
       setStatus("GPS unavailable, using fallback city");
       setCoords(fallback);
       fetchAir(fallback.lat, fallback.lon);
       return;
     }
     setStatus("Grabbing your air station…");
-    navigator.geolocation.getCurrentPosition(
+    locationService.getCurrentLocation({
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 60000,
+    }).then(
       (pos) => {
         const c = {
-          lat: Number(pos.coords.latitude.toFixed(4)),
-          lon: Number(pos.coords.longitude.toFixed(4)),
+          lat: pos.lat,
+          lon: pos.lng,
           label: "Your location",
         };
         setCoords(c);
@@ -196,10 +317,16 @@ export default function Home() {
         setStatus("Using fallback city");
         setCoords(fallback);
         fetchAir(fallback.lat, fallback.lon);
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
+      }
     );
   }, [userKey]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      locationService.stopLocationTracking();
+    };
+  }, []);
 
   const fetchAir = async (lat: number, lon: number) => {
     setLoadingAir(true);
@@ -245,6 +372,56 @@ export default function Home() {
       setLoadingAir(false);
     }
   };
+
+  // Handle zoom changes from map
+  const handleZoomChange = useCallback((newZoom: number) => {
+    setCurrentZoom(newZoom);
+    const newRadius = getRadiusFromZoom(newZoom);
+    setRadiusKm(newRadius);
+    
+    // Debounce area data refresh
+    if (zoomChangeTimeout.current) {
+      clearTimeout(zoomChangeTimeout.current);
+    }
+    
+    setIsRefreshingData(true);
+    zoomChangeTimeout.current = setTimeout(() => {
+      if (coords.lat && coords.lon) {
+        fetchAreaAirQuality(coords.lat, coords.lon, newRadius);
+      }
+      setIsRefreshingData(false);
+    }, 500);
+  }, [coords]);
+
+  // Fetch air quality data for a radius area
+  const fetchAreaAirQuality = async (lat: number, lon: number, customRadius?: number) => {
+    setIsScanningArea(true);
+    const radius = customRadius || radiusKm;
+    try {
+      const response = await airQualityService.fetchAirQualityByRadius(lat, lon, radius);
+      setAreaAirQuality(response.summary || null);
+      setNearbyStations(response.data);
+      setStatus(`Scanned area: ${response.data.length} stations found within ${formatRadius(radius)}`);
+    } catch (error) {
+      console.error('Error fetching area air quality:', error);
+      setStatus('Failed to scan area for air quality data');
+    } finally {
+      setIsScanningArea(false);
+    }
+  };
+
+  // Toggle radius mode
+  const toggleRadiusMode = useCallback(() => {
+    const newShowRadius = !showRadius;
+    setShowRadius(newShowRadius);
+    
+    if (newShowRadius && coords.lat && coords.lon) {
+      fetchAreaAirQuality(coords.lat, coords.lon);
+    } else if (!newShowRadius) {
+      setAreaAirQuality(null);
+      setNearbyStations([]);
+    }
+  }, [showRadius, coords]);
 
   const handleLog = async () => {
     if (!userKey || !air) return;
@@ -399,6 +576,12 @@ export default function Home() {
             <SparklesIcon className="h-4 w-4" />
             Source: {air?.source === "waqi" ? "WAQI" : "OpenAQ"}
           </span>
+          {isTrackingEnabled && (
+            <span className="pill inline-flex items-center gap-2 bg-emerald-50 text-emerald-700">
+              <MapPinIcon className="h-4 w-4 animate-pulse" />
+              Tracking
+            </span>
+          )}
         </div>
       </header>
 
@@ -406,7 +589,7 @@ export default function Home() {
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Account</p>
           <h2 className="text-lg font-semibold text-slate-900">
-            {isSignedIn ? "You’re synced. Keep exploring." : "Sign in to keep your passport synced"}
+            {isSignedIn ? "You're synced. Keep exploring." : "Sign in to keep your passport synced"}
           </h2>
           <p className="text-sm text-slate-700">
             {isSignedIn
@@ -630,7 +813,78 @@ export default function Home() {
               Live pollution heatmap & stations
             </h2>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={toggleGPSTracking}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 ${
+                isTrackingEnabled
+                  ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              {isTrackingEnabled ? (
+                <>
+                  <PauseIcon className="h-4 w-4" />
+                  Stop Tracking
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="h-4 w-4" />
+                  Start Tracking
+                </>
+              )}
+            </button>
+            <button
+              onClick={centerMapOnLocation}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 transition-all duration-300 hover:scale-105 hover:bg-slate-200"
+            >
+              <MapIcon className="h-4 w-4" />
+              Center
+            </button>
+          </div>
         </div>
+
+        {/* GPS Controls */}
+        {isTrackingEnabled && (
+          <div className="mb-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-900">GPS Tracking Active</p>
+                <p className="text-xs text-emerald-700">
+                  Last update: {lastLocationUpdate ? lastLocationUpdate.toLocaleTimeString() : "Never"}
+                </p>
+                <p className="text-xs text-emerald-700">
+                  Location history: {locationHistory.length} points
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-600">Show 100km radius</span>
+                  <input
+                    type="checkbox"
+                    checked={showRadius}
+                    onChange={toggleRadiusMode}
+                    className="rounded text-emerald-600"
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-600">Update every</span>
+                  <select
+                    value={trackingFrequency}
+                    onChange={(e) => setTrackingFrequency(Number(e.target.value))}
+                    className="rounded border border-slate-300 px-2 py-1 text-sm"
+                  >
+                    <option value={2000}>2s</option>
+                    <option value={5000}>5s</option>
+                    <option value={10000}>10s</option>
+                    <option value={30000}>30s</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="h-96 w-full rounded-xl overflow-hidden shadow-inner">
           <AirQualityMap
             center={{ lat: coords.lat, lng: coords.lon }}
@@ -644,7 +898,16 @@ export default function Home() {
                 co: air?.co ?? undefined,
                 aqi: risk.score,
                 location: air?.location ?? "Current Location"
-              }
+              },
+              ...nearbyStations.map(station => ({
+                lat: station.lat,
+                lng: station.lng,
+                pm25: station.pm25 ?? undefined,
+                no2: station.no2 ?? undefined,
+                co: station.co ?? undefined,
+                aqi: station.aqi,
+                location: station.name ?? station.location ?? "Unknown Station"
+              }))
             ]}
             nearbyStations={[
               {
@@ -656,13 +919,70 @@ export default function Home() {
                 pm25: air?.pm25,
                 no2: air?.no2,
                 co: air?.co
-              }
+              },
+              ...nearbyStations.map(station => ({
+                lat: station.lat,
+                lng: station.lng,
+                name: station.name ?? station.location ?? "Unknown Station",
+                location: station.city ?? station.country ?? "Unknown Location",
+                aqi: station.aqi,
+                pm25: station.pm25,
+                no2: station.no2,
+                co: station.co
+              }))
             ]}
+            locationHistory={locationHistory}
+            showRadius={showRadius}
+            radiusKm={radiusKm}
+            isTracking={isTrackingEnabled}
+            onZoomChange={handleZoomChange}
             className="w-full h-full"
           />
         </div>
+        {isScanningArea && (
+          <div className="mt-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-xs text-amber-700 flex items-center gap-2">
+              <ArrowPathIcon className="h-3 w-3 animate-spin" />
+              Scanning area for air quality stations...
+            </p>
+          </div>
+        )}
+        {areaAirQuality && (
+          <div className="mt-3 p-3 bg-sky-50 rounded-lg border border-sky-200">
+            <p className="text-xs text-slate-600 font-medium mb-1">
+              Area Summary ({formatRadius(radiusKm)} radius) • Zoom: {currentZoom}
+            </p>
+            {isRefreshingData && (
+              <div className="flex items-center gap-1 mb-2">
+                <ArrowPathIcon className="h-3 w-3 animate-spin text-sky-600" />
+                <span className="text-xs text-sky-600">Refreshing data...</span>
+              </div>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div>
+                <span className="text-slate-500">Stations:</span>
+                <span className="ml-1 font-semibold">{areaAirQuality.totalStations}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Avg AQI:</span>
+                <span className="ml-1 font-semibold">{areaAirQuality.averageAQI}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Highest AQI:</span>
+                <span className="ml-1 font-semibold">{areaAirQuality.highestAQI}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Lowest AQI:</span>
+                <span className="ml-1 font-semibold">{areaAirQuality.lowestAQI}</span>
+              </div>
+            </div>
+          </div>
+        )}
         <p className="mt-3 text-xs text-slate-500">
           🗺️ Toggle layers (Street/Satellite/Terrain) • 🔥 Heatmap shows pollution density
+          {isTrackingEnabled && " • 📍 Location tracking enabled with history"}
+          {showRadius && ` • 📡 Showing ${nearbyStations.length + 1} stations in ${formatRadius(radiusKm)}`}
+          {showRadius && ` • Zoom Level: ${currentZoom}`}
         </p>
       </section>
 

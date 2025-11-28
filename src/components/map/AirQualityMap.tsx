@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Icon } from "leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, Polyline, useMapEvents } from "react-leaflet";
+import { Icon, type Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat/dist/leaflet-heat.js";
+import { type Location } from "../../lib/locationService";
+import { getRadiusFromZoom, formatRadius } from "../../lib/radiusUtils";
 
 // Fix for default markers
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -15,10 +17,17 @@ Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-interface Location {
-  lat: number;
-  lng: number;
-}
+// Dynamic import to avoid SSR issues
+const HeatmapLayer = dynamic(
+  () => import("./HeatmapLayer"),
+  { ssr: false }
+);
+
+// Dynamic import to avoid SSR issues
+const ZoomControl = dynamic(
+  () => import("./ZoomControl"),
+  { ssr: false }
+);
 
 interface AirQualityData {
   lat?: number;
@@ -36,13 +45,13 @@ interface AirQualityMapProps {
   airQualityData?: AirQualityData[];
   nearbyStations?: any[];
   className?: string;
+  locationHistory?: Location[];
+  showRadius?: boolean;
+  radiusKm?: number;
+  isTracking?: boolean;
+  onZoomChange?: (zoom: number) => void;
+  onRadiusChange?: (radius: number) => void;
 }
-
-// Dynamic import to avoid SSR issues
-const HeatmapLayer = dynamic(
-  () => import("./HeatmapLayer"),
-  { ssr: false }
-);
 
 const MapController = ({ center, zoom }: { center: Location; zoom: number }) => {
   const map = useMap();
@@ -54,16 +63,86 @@ const MapController = ({ center, zoom }: { center: Location; zoom: number }) => 
   return null;
 };
 
+const MapInstanceSetter = ({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap | null> }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map, mapRef]);
+
+  return null;
+};
+
+// Custom map events handler
+const MapEventHandler = ({ 
+  onZoomChange, 
+  onRadiusChange 
+}: { 
+  onZoomChange?: (zoom: number) => void;
+  onRadiusChange?: (radius: number) => void;
+}) => {
+  const map = useMapEvents({
+    zoomend: () => {
+      const zoom = map.getZoom();
+      onZoomChange?.(zoom);
+      onRadiusChange?.(getRadiusFromZoom(zoom));
+    },
+  });
+
+  return null;
+};
+
 export default function AirQualityMap({
   center,
   userLocation,
   airQualityData = [],
   nearbyStations = [],
   className = "",
+  locationHistory = [],
+  showRadius = false,
+  radiusKm = 100,
+  isTracking = false,
+  onZoomChange,
+  onRadiusChange,
 }: AirQualityMapProps) {
   const [mapLayer, setMapLayer] = useState("street");
   const [zoom, setZoom] = useState(13);
   const [showHeatmap, setShowHeatmap] = useState(true);
+  const [currentRadius, setCurrentRadius] = useState(radiusKm);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const mapRef = useRef<LeafletMap | null>(null);
+
+  // Update center when user location changes and tracking is active
+  useEffect(() => {
+    if (isTracking && userLocation) {
+      const newZoom = 15;
+      setZoom(newZoom);
+      const newRadius = getRadiusFromZoom(newZoom);
+      setCurrentRadius(newRadius);
+      onZoomChange?.(newZoom);
+      onRadiusChange?.(newRadius);
+    }
+  }, [userLocation, isTracking, onZoomChange, onRadiusChange]);
+
+  // Update radius when zoom changes
+  useEffect(() => {
+    const newRadius = getRadiusFromZoom(zoom);
+    setCurrentRadius(newRadius);
+  }, [zoom]);
+
+  // Handle zoom changes with animation
+  const handleZoomChange = useCallback((newZoom: number) => {
+    setIsAnimating(true);
+    setZoom(newZoom);
+    onZoomChange?.(newZoom);
+    setTimeout(() => setIsAnimating(false), 500);
+  }, [onZoomChange]);
+
+  // Handle radius changes
+  const handleRadiusChange = useCallback((newRadius: number) => {
+    setCurrentRadius(newRadius);
+    onRadiusChange?.(newRadius);
+  }, [onRadiusChange]);
 
   const tileLayers = {
     street: {
@@ -155,49 +234,98 @@ export default function AirQualityMap({
         </div>
       </div>
 
-      {/* Zoom Controls */}
-      <div className="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-2 flex flex-col gap-1">
-        <button
-          onClick={() => setZoom(z => Math.min(z + 1, 18))}
-          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-        >
-          +
-        </button>
-        <button
-          onClick={() => setZoom(z => Math.max(z - 1, 1))}
-          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-        >
-          −
-        </button>
+      {/* Custom Zoom Control with Radius Display */}
+      <div className="absolute top-4 left-4 z-[1000]">
+        <ZoomControl
+          currentZoom={zoom}
+          onZoomChange={handleZoomChange}
+          onRadiusChange={handleRadiusChange}
+          showRadius={showRadius}
+        />
       </div>
+
+      {/* Coverage Area Label */}
+      {showRadius && userLocation && (
+        <div className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg shadow-lg px-3 py-2">
+          <div className="text-sm font-medium text-gray-900">
+            Coverage: {formatRadius(currentRadius)}
+          </div>
+          <div className="text-xs text-gray-500">
+            {nearbyStations?.length || 0} stations
+          </div>
+        </div>
+      )}
 
       {/* Map */}
       <MapContainer
-        center={center}
+        center={[center.lat, center.lng]}
         zoom={zoom}
         className="w-full h-full"
         zoomControl={false}
       >
-        <MapController center={center} zoom={zoom} />
+        <MapInstanceSetter mapRef={mapRef} />
+        <MapController center={{ lat: center.lat, lng: center.lng }} zoom={zoom} />
+        <MapEventHandler 
+          onZoomChange={onZoomChange} 
+          onRadiusChange={onRadiusChange}
+        />
 
         <TileLayer
           url={tileLayers[mapLayer as keyof typeof tileLayers].url}
           attribution={tileLayers[mapLayer as keyof typeof tileLayers].attribution}
         />
 
-        {/* User Location Marker */}
+        {/* User Location Marker with dynamic updates */}
         {userLocation && (
-          <Marker position={userLocation}>
+          <Marker 
+            position={[userLocation.lat, userLocation.lng]}
+            key={`${userLocation.lat}-${userLocation.lng}-${Date.now()}`} // Force re-render on location change
+          >
             <Popup>
               <div className="text-sm">
                 <strong>Your Location</strong>
                 <br />
-                Lat: {userLocation.lat.toFixed(4)}
+                Lat: {userLocation.lat.toFixed(6)}
                 <br />
-                Lng: {userLocation.lng.toFixed(4)}
+                Lng: {userLocation.lng.toFixed(6)}
+                {isTracking && (
+                  <>
+                    <br />
+                    <span className="text-emerald-600 font-medium">● Tracking Active</span>
+                  </>
+                )}
               </div>
             </Popup>
           </Marker>
+        )}
+
+        {/* Dynamic Radius Circle */}
+        {showRadius && userLocation && (
+          <Circle
+            center={[userLocation.lat, userLocation.lng]}
+            radius={currentRadius * 1000} // Convert km to meters
+            pathOptions={{
+              fillColor: '#3b82f6',
+              fillOpacity: 0.1,
+              color: '#3b82f6',
+              weight: 2,
+              opacity: isAnimating ? 0.8 : 0.5,
+              dashArray: isAnimating ? '5, 5' : '10, 10',
+              className: isAnimating ? 'animate-pulse' : '',
+            }}
+          />
+        )}
+
+        {/* Location History Polyline */}
+        {locationHistory && locationHistory.length > 1 && (
+          <Polyline
+            positions={locationHistory.map(loc => [loc.lat, loc.lng])}
+            pathOptions={{
+              color: '#10b981',
+              weight: 3,
+              opacity: 0.7,
+            }}
+          />
         )}
 
         {/* Air Quality Station Markers */}
