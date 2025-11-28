@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: air-app:latest
     container_name: air-app
     environment:
       NODE_ENV: production
