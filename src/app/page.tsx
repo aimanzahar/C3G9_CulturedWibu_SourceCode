@@ -54,45 +54,45 @@ export default function Landing() {
       {/* Hero */}
       <section className="grid gap-10 lg:grid-cols-2 lg:items-center">
         <div className="space-y-4">
-          <p className="pill inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-600">
+          <p className="pill initial-hidden animate-slide-down inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-600">
             <SparklesIcon className="h-4 w-4" />
             Malaysia-first air wellness
           </p>
-          <h1 className="font-display text-4xl font-semibold text-slate-900 md:text-5xl">
+          <h1 className="initial-hidden animate-slide-up delay-100 font-display text-4xl font-semibold text-slate-900 md:text-5xl">
             {appName}: breathe smarter across the Klang Valley.
           </h1>
-          <p className="text-lg text-slate-700">
+          <p className="initial-hidden animate-slide-up delay-200 text-lg text-slate-700">
             A calm home for commuters to track air quality, choose cleaner routes, and earn rewards
             for low-exposure days. Built for KL heat, haze, and rapid metro hops.
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="initial-hidden animate-slide-up delay-300 flex flex-wrap gap-3">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-xl"
             >
               Launch live dashboard
-              <ArrowLongRightIcon className="h-4 w-4" />
+              <ArrowLongRightIcon className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-800 transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-lg"
             >
               Create account
             </Link>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-            <span className="pill">WAQI + OpenAQ</span>
-            <span className="pill">Convex auth</span>
-            <span className="pill">Streaks & badges</span>
-            <span className="pill">Designed in MY</span>
+          <div className="initial-hidden animate-fade-in delay-400 flex flex-wrap gap-2 text-xs text-slate-600">
+            <span className="pill transition-transform duration-300 hover:scale-110">WAQI + OpenAQ</span>
+            <span className="pill transition-transform duration-300 hover:scale-110">Convex auth</span>
+            <span className="pill transition-transform duration-300 hover:scale-110">Streaks & badges</span>
+            <span className="pill transition-transform duration-300 hover:scale-110">Designed in MY</span>
           </div>
         </div>
 
-        <div className="relative">
-          <div className="card relative overflow-hidden rounded-3xl p-6">
-            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-sky-100 via-white to-emerald-50" />
-            <div className="absolute -left-6 -top-6 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
-            <div className="absolute -right-8 -bottom-10 h-32 w-32 rounded-full bg-amber-200/50 blur-3xl" />
+        <div className="relative initial-hidden animate-slide-left delay-200">
+          <div className="card hover-lift relative overflow-hidden rounded-3xl p-6">
+            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-sky-100 via-white to-emerald-50 transition-opacity duration-500" />
+            <div className="absolute -left-6 -top-6 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl animate-float" />
+            <div className="absolute -right-8 -bottom-10 h-32 w-32 rounded-full bg-amber-200/50 blur-3xl animate-float delay-500" />
 
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Snapshot</p>
             <h3 className="mt-2 font-display text-2xl text-slate-900">Today in KLCC</h3>
@@ -142,7 +142,7 @@ export default function Landing() {
       </section>
 
       {/* Mission */}
-      <section className="card rounded-3xl p-6">
+      <section className="card initial-hidden animate-scale-in delay-100 rounded-3xl p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Our mission</p>
@@ -156,10 +156,10 @@ export default function Landing() {
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {pillars.map((item) => (
+          {pillars.map((item, index) => (
             <div
               key={item.title}
-              className="rounded-2xl bg-white/85 p-4 shadow-sm ring-1 ring-slate-100"
+              className={`initial-hidden animate-slide-up delay-${(index + 1) * 100} hover-lift rounded-2xl bg-white/85 p-4 shadow-sm ring-1 ring-slate-100 transition-all duration-300 hover:ring-sky-200`}
             >
               <div className="flex items-center gap-2">
                 {item.icon}
@@ -173,18 +173,18 @@ export default function Landing() {
 
       {/* How it works */}
       <section className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr] lg:items-start">
-        <div className="card rounded-3xl p-6">
+        <div className="card initial-hidden animate-slide-right delay-100 rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">How it works</p>
           <h3 className="mt-2 font-display text-xl text-slate-900">
             Three calm steps to cleaner daily air.
           </h3>
           <div className="mt-4 space-y-3">
-            {steps.map((step) => (
+            {steps.map((step, index) => (
               <div
                 key={step.label}
-                className="flex items-start gap-3 rounded-2xl bg-white/85 p-4 shadow-sm ring-1 ring-slate-100"
+                className={`initial-hidden animate-slide-up delay-${(index + 2) * 100} hover-lift flex items-start gap-3 rounded-2xl bg-white/85 p-4 shadow-sm ring-1 ring-slate-100 transition-all duration-300 hover:ring-2 hover:ring-sky-200`}
               >
-                <span className="pill text-xs font-semibold">{step.label}</span>
+                <span className="pill text-xs font-semibold transition-all duration-300 hover:bg-sky-100">{step.label}</span>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{step.title}</p>
                   <p className="text-sm text-slate-600">{step.body}</p>
@@ -195,20 +195,20 @@ export default function Landing() {
           <div className="mt-5 flex flex-wrap gap-3 text-sm">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-lg"
             >
               Open dashboard
             </Link>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 font-semibold text-slate-700 transition hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 font-semibold text-slate-700 transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-md"
             >
               Create account
             </Link>
           </div>
         </div>
 
-        <div className="card rounded-3xl p-6">
+        <div className="card initial-hidden animate-slide-left delay-200 rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Impact</p>
           <h3 className="mt-2 font-display text-xl text-slate-900">
             Built for Malaysia’s rhythms.
@@ -243,7 +243,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <section className="rounded-3xl bg-slate-900 p-6 text-slate-100">
+      <section className="initial-hidden animate-scale-in delay-100 rounded-3xl bg-slate-900 p-6 text-slate-100 transition-all duration-300 hover:shadow-2xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="pill border-white/15 bg-white/10 text-[11px] uppercase tracking-[0.14em] text-slate-100">
@@ -251,19 +251,19 @@ export default function Landing() {
             </p>
             <h4 className="mt-2 font-display text-2xl">Breathe better, move kinder.</h4>
             <p className="text-sm text-slate-200">
-              Live air, nudges, and rewards for Malaysia’s daily movers.
+              Live air, nudges, and rewards for Malaysia's daily movers.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
             <Link
               href="/dashboard"
-              className="rounded-full bg-white px-4 py-2 font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50"
+              className="rounded-full bg-white px-4 py-2 font-semibold text-slate-900 shadow-sm transition-all duration-300 hover:scale-105 hover:bg-slate-50 hover:shadow-md"
             >
               Open dashboard
             </Link>
             <Link
               href="/register"
-              className="rounded-full border border-white/30 px-4 py-2 font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-white/30 px-4 py-2 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-white/10"
             >
               Create account
             </Link>

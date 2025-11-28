@@ -363,10 +363,10 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10 md:px-10 lg:px-14">
-      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <header className="initial-hidden animate-slide-down flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="pill inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-600">
-            <SparklesIcon className="h-4 w-4" />
+            <SparklesIcon className="h-4 w-4 animate-pulse" />
             Personalized Air Exposure Passport
           </p>
           <h1 className="mt-3 font-display text-3xl font-semibold text-slate-900 md:text-4xl">
@@ -375,27 +375,27 @@ export default function Home() {
           <p className="mt-1 text-sm text-slate-600">
             Real-time PM2.5 & NO₂ near you, with commute tips and streak-based rewards.
           </p>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-slate-500 transition-colors duration-300 hover:text-slate-700">
             Status: {status}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-slate-700">
-          <span className="pill inline-flex items-center gap-2">
+          <span className="pill inline-flex items-center gap-2 transition-all duration-300 hover:scale-105">
             <MapPinIcon className="h-4 w-4" />
             {coords.label} {coords.lat.toFixed(3)}, {coords.lon.toFixed(3)}
           </span>
-          <span className="pill inline-flex items-center gap-2">
+          <span className="pill inline-flex items-center gap-2 transition-all duration-300 hover:scale-105">
             <ArrowPathIcon className="h-4 w-4" />
             Updated: {formatTime(air?.lastUpdated)}
           </span>
-          <span className="pill inline-flex items-center gap-2">
+          <span className="pill inline-flex items-center gap-2 transition-all duration-300 hover:scale-105">
             <SparklesIcon className="h-4 w-4" />
             Source: {air?.source === "waqi" ? "WAQI" : "OpenAQ"}
           </span>
         </div>
       </header>
 
-      <section className="card flex flex-col gap-5 rounded-2xl p-5 md:flex-row md:items-center md:justify-between">
+      <section className="card initial-hidden animate-slide-up delay-100 flex flex-col gap-5 rounded-2xl p-5 transition-all duration-300 hover:shadow-xl md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">Account</p>
           <h2 className="text-lg font-semibold text-slate-900">
@@ -424,13 +424,13 @@ export default function Home() {
           <div className="flex w-full flex-wrap items-center gap-2 text-sm md:max-w-[480px]">
             <button
               onClick={scrollToPassport}
-              className="rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              className="rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-md"
             >
               Open dashboard
             </button>
             <button
               onClick={handleLogout}
-              className="rounded-full border border-rose-200 px-4 py-2 font-semibold text-rose-600 transition hover:bg-rose-50"
+              className="rounded-full border border-rose-200 px-4 py-2 font-semibold text-rose-600 transition-all duration-300 hover:scale-105 hover:bg-rose-50 hover:shadow-sm"
               disabled={authLoading}
             >
               Sign out
@@ -450,7 +450,7 @@ export default function Home() {
                     setAuthEmail(e.target.value);
                     setAuthMessage("");
                   }}
-                  className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                  className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none transition-all duration-300 focus:border-slate-400 focus:ring-1 focus:ring-slate-200 focus:scale-[1.02]"
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
@@ -464,21 +464,21 @@ export default function Home() {
                     setAuthPassword(e.target.value);
                     setAuthMessage("");
                   }}
-                  className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                  className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm shadow-sm outline-none transition-all duration-300 focus:border-slate-400 focus:ring-1 focus:ring-slate-200 focus:scale-[1.02]"
                 />
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <button
                 onClick={handleLogin}
-                className="rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+                className="rounded-full bg-slate-900 px-4 py-2 font-semibold text-white shadow-sm transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-md disabled:opacity-60"
                 disabled={authLoading}
               >
                 {authLoading ? "Working…" : "Sign in"}
               </button>
               <Link
                 href="/register"
-                className="rounded-full border border-slate-200 px-4 py-2 font-semibold text-slate-700 transition hover:bg-white"
+                className="rounded-full border border-slate-200 px-4 py-2 font-semibold text-slate-700 transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-sm"
               >
                 Create account
               </Link>
@@ -491,13 +491,13 @@ export default function Home() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3" ref={passportRef} id="passport">
-        <div className="card col-span-1 rounded-2xl p-5">
+        <div className="card initial-hidden animate-slide-up delay-200 hover-lift col-span-1 rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-[0.15em] text-slate-500">
               Exposure Score
             </span>
             <span
-              className={`badge ${
+              className={`badge transition-all duration-300 ${
                 risk.level === "low"
                   ? "bg-green-50 text-green-700"
                   : risk.level === "moderate"
@@ -515,28 +515,28 @@ export default function Home() {
             </span>
           </div>
           <div className="mt-6 flex items-end gap-3">
-            <span className="font-display text-6xl text-slate-900">
+            <span className="font-display text-6xl text-slate-900 transition-all duration-500">
               {loadingAir ? "…" : risk.score}
             </span>
             <span className="pb-2 text-sm text-slate-500">/100</span>
           </div>
           <p className="mt-3 text-sm text-slate-600">{risk.narrative}</p>
           <div className="mt-6 grid grid-cols-3 gap-2 text-center text-xs text-slate-600">
-            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm">
+            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">PM2.5</p>
               <p className="font-display text-2xl text-slate-900">
                 {formatValue(air?.pm25)}
               </p>
               <p className="text-[11px] text-slate-500">µg/m³</p>
             </div>
-            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm">
+            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">NO₂</p>
               <p className="font-display text-2xl text-slate-900">
                 {formatValue(air?.no2)}
               </p>
               <p className="text-[11px] text-slate-500">ppb</p>
             </div>
-            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm">
+            <div className="rounded-xl bg-white/80 px-3 py-3 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">CO</p>
               <p className="font-display text-2xl text-slate-900">
                 {formatValue(air?.co)}
@@ -546,30 +546,30 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="card col-span-1 rounded-2xl p-5">
+        <div className="card initial-hidden animate-slide-up delay-300 hover-lift col-span-1 rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-[0.15em] text-slate-500">
               Rewards & Streak
             </span>
-            <TrophyIcon className="h-5 w-5 text-amber-500" />
+            <TrophyIcon className="h-5 w-5 text-amber-500 transition-transform duration-300 hover:scale-110 hover:rotate-12" />
           </div>
           <div className="mt-5 grid grid-cols-2 gap-4">
-            <div className="rounded-xl bg-white/90 px-4 py-3 shadow-sm">
+            <div className="rounded-xl bg-white/90 px-4 py-3 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">
                 Points
               </p>
-              <p className="font-display text-3xl text-slate-900">
+              <p className="font-display text-3xl text-slate-900 transition-all duration-500">
                 {passport?.profile?.points ?? 0}
               </p>
               <p className="text-xs text-slate-500">
                 Low-exposure commutes boost rewards.
               </p>
             </div>
-            <div className="rounded-xl bg-white/90 px-4 py-3 shadow-sm">
+            <div className="rounded-xl bg-white/90 px-4 py-3 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md">
               <p className="text-[11px] uppercase tracking-wide text-slate-500">
                 Streak
               </p>
-              <p className="font-display text-3xl text-slate-900">
+              <p className="font-display text-3xl text-slate-900 transition-all duration-500">
                 {passport?.profile?.streak ?? 0}d
               </p>
               <p className="text-xs text-slate-500">
@@ -579,27 +579,27 @@ export default function Home() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-700">
             {badges.map((b) => (
-              <span key={b} className="badge bg-white/70 text-slate-800">
+              <span key={b} className="badge bg-white/70 text-slate-800 transition-all duration-300 hover:scale-110 hover:bg-amber-50">
                 {b}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="card col-span-1 rounded-2xl p-5">
+        <div className="card initial-hidden animate-slide-up delay-400 hover-lift col-span-1 rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-[0.15em] text-slate-500">
               Quick Recommendations
             </span>
-            <SparklesIcon className="h-5 w-5 text-sky-500" />
+            <SparklesIcon className="h-5 w-5 text-sky-500 animate-pulse" />
           </div>
           <div className="mt-4 space-y-3">
-            {recommendationDeck.map((rec) => (
+            {recommendationDeck.map((rec, index) => (
               <div
                 key={rec.title}
-                className="flex items-start gap-3 rounded-xl bg-white/90 p-3 shadow-sm"
+                className={`initial-hidden animate-slide-left delay-${(index + 5) * 100} flex items-start gap-3 rounded-xl bg-white/90 p-3 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md`}
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-all duration-300 hover:bg-sky-100 hover:rotate-6">
                   {rec.icon}
                 </div>
                 <div>
@@ -613,7 +613,7 @@ export default function Home() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card rounded-2xl p-5 lg:col-span-2">
+        <div className="card initial-hidden animate-slide-right delay-100 hover-lift rounded-2xl p-5 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
@@ -624,18 +624,18 @@ export default function Home() {
               </h2>
             </div>
             <button
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white transition hover:bg-slate-800"
+              className="group inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:shadow-lg"
               onClick={() => fetchAir(coords.lat, coords.lon)}
             >
-              <ArrowPathIcon className="h-4 w-4" />
+              <ArrowPathIcon className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
               Refresh AQ
             </button>
           </div>
           <div className="mt-4 space-y-3">
-            {(passport?.exposures ?? []).map((entry: ExposureEntry) => (
+            {(passport?.exposures ?? []).map((entry: ExposureEntry, index: number) => (
               <div
                 key={entry._id}
-                className="flex flex-col justify-between gap-3 rounded-xl bg-white/90 p-4 shadow-sm md:flex-row md:items-center"
+                className={`initial-hidden animate-slide-up delay-${(index + 2) * 100} flex flex-col justify-between gap-3 rounded-xl bg-white/90 p-4 shadow-sm transition-all duration-300 hover:scale-[1.01] hover:shadow-md md:flex-row md:items-center`}
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -671,7 +671,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="card rounded-2xl p-5">
+        <div className="card initial-hidden animate-slide-left delay-200 hover-lift rounded-2xl p-5">
           <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
             Log a commute
           </p>
@@ -683,10 +683,10 @@ export default function Home() {
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`flex-1 rounded-xl px-3 py-2 text-sm capitalize transition ${
+                className={`flex-1 rounded-xl px-3 py-2 text-sm capitalize transition-all duration-300 hover:scale-105 ${
                   mode === m
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-white/90 text-slate-700 shadow-sm hover:bg-white"
+                    ? "bg-slate-900 text-white shadow-md"
+                    : "bg-white/90 text-slate-700 shadow-sm hover:bg-white hover:shadow-md"
                 }`}
               >
                 {m}
@@ -703,9 +703,16 @@ export default function Home() {
           <button
             onClick={handleLog}
             disabled={!air || saving}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save this commute"}
+            {saving ? (
+              <>
+                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>Save this commute</>
+            )}
           </button>
           <div className="mt-4 rounded-xl bg-white/90 p-4 text-xs text-slate-600 shadow-sm">
             <p className="font-semibold text-slate-900">SDG 3 - Health</p>
