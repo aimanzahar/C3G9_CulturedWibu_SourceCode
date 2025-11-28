@@ -96,7 +96,7 @@ export default function Home() {
 
   const session = useQuery(
     api.auth.session,
-    sessionToken ? { token: sessionToken } : undefined,
+    sessionToken ? { token: sessionToken } : "skip",
   );
 
   useEffect(() => {
@@ -109,11 +109,11 @@ export default function Home() {
 
   const passport = useQuery(
     api.passport.getPassport,
-    userKey ? { userKey, limit: 6 } : undefined,
+    userKey ? { userKey, limit: 6 } : "skip",
   );
   const insight = useQuery(
     api.passport.insights,
-    userKey ? { userKey } : undefined,
+    userKey ? { userKey } : "skip",
   );
 
   const risk = useMemo(() => scoreAir(air), [air]);
@@ -619,7 +619,7 @@ export default function Home() {
             </button>
           </div>
           <div className="mt-4 space-y-3">
-            {(passport?.exposures ?? []).map((entry) => (
+            {(passport?.exposures ?? []).map((entry: any) => (
               <div
                 key={entry._id}
                 className="flex flex-col justify-between gap-3 rounded-xl bg-white/90 p-4 shadow-sm md:flex-row md:items-center"
@@ -712,7 +712,10 @@ export default function Home() {
                 Trend (last 7 days)
               </p>
               <h3 className="font-display text-lg text-slate-900">
-                Average score: {insight?.trend?.length ? insight.trend.slice(-7).reduce((acc, d) => acc + d.average, 0) / insight.trend.slice(-7).length : "—"}
+                Average score: {insight?.trend?.length
+                  ? insight.trend.slice(-7).reduce((acc: number, d: any) => acc + d.average, 0) /
+                    insight.trend.slice(-7).length
+                  : "—"}
               </h3>
             </div>
             <span className="badge bg-white/80 text-slate-800">
@@ -720,7 +723,7 @@ export default function Home() {
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {(insight?.trend ?? []).slice(-8).map((day) => (
+            {(insight?.trend ?? []).slice(-8).map((day: any) => (
               <div
                 key={day.day}
                 className="rounded-xl bg-white/90 p-3 shadow-sm"
