@@ -11,6 +11,10 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
       PORT: "3000"
+      # Set this to your Convex deployment URL (must be https when site is https)
+      # Example (Convex Cloud): https://<your-deployment>.convex.cloud
+      # Example (self-hosted): https://convex.yourdomain.com
+      NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
     ports:
       - "3000:3000"
     restart: unless-stopped
