@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Air Exposure Passport (Next.js + Convex self-hosted)
 
-## Getting Started
+AI-guided mobile + desktop web app that fuses live OpenAQ readings with commute recommendations, streak-based rewards, and SDG 3 health framing.
 
-First, run the development server:
+## Quick start
 
 ```bash
+# 1) Install deps
+npm install
+
+# 2) Start Convex against your self-hosted cluster (uses .env.local)
+CONVEX_SELF_HOSTED_URL=https://convex.zahar.my \
+CONVEX_SELF_HOSTED_ADMIN_KEY="<admin key>" \
+npx convex dev
+
+# 3) Run the app
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Required environment
+Create `.env.local` (already populated) with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_CONVEX_URL=https://convex.zahar.my
+CONVEX_SELF_HOSTED_URL=https://convex.zahar.my
+CONVEX_SELF_HOSTED_ADMIN_KEY=convex-self-hosted|01aa37dca8761f218e328bb57efe735dbf5d738bd7cf93f859ab99b3bcb2afb9f9ee57adf0
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it works
 
-## Learn More
+- **Frontend (Next.js app router)** in `src/app/page.tsx` is a client component that:
+  - Captures GPS (falls back to Kuala Lumpur), calls `/api/openaq` for PM2.5/NO₂/CO near the user, and computes a 0–100 exposure score.
+  - Shows responsive cards (mobile-first) for live air quality, smart move suggestions (avoid peak traffic, switch to metro, indoor exercise alerts), and SDG‑3 playbook items.
+  - Logs commutes via Convex to earn points, streaks, and badges; displays the latest passport entries and 7‑day trends.
+- **API proxy** `src/app/api/openaq/route.ts` forwards coordinates to the public OpenAQ API and normalizes the payload.
+- **Convex self-hosted backend**:
+  - Component `convex/air` (schema + functions) namespaced via `convex/air/convex.config.ts`.
+  - Schema (`convex/air/schema.ts`): `profiles` table (userKey, streak, points) and `exposures` table (lat/lon, pollutants, score, tips).
+  - Business logic (`convex/air/passport.ts`): risk scoring, streak + points, and trend aggregation.
+  - Public wrappers (`convex/passport.ts`) expose the component to the client using `ctx.runQuery/ctx.runMutation`.
 
-To learn more about Next.js, take a look at the following resources:
+## Primary flows
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1) User opens the app → GPS → `/api/openaq` → exposure score rendered.
+2) `ensureProfile` mutation auto-creates a profile keyed by a device-local `nanoid`.
+3) “Save this commute” → `logExposure` mutation stores pollutants, updates streak/bestStreak/points, and returns tips.
+4) Passport & insights queries surface latest entries + 7‑day averages for the dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Design & UX notes
 
-## Deploy on Vercel
+- Uses Space Grotesk + Manrope, glassy cards, and gradient backdrop; verified for mobile + desktop with responsive grids.
+- No purple bias; accent palette uses sky/emerald/orange.
+- Buttons and pills are finger-friendly; key stats stay above the fold on small screens.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Additional ideas / next steps
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Add OpenStreetMap traffic density to steer routes automatically.
+- Trigger push alerts when local PM2.5 > 35 µg/m³ or NO₂ > 40 ppb.
+- Map clinic/ER access gaps by overlaying DOE Malaysia AQI with WHO urban health data.
+
+## Testing
+
+- `npm run lint` (passes)
+- Manual smoke: load home page, allow location, hit “Save this commute”, confirm streak/points update and entry appears in Passport list.

@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.1.5",
+    "convex": "^1.29.3",
+    "nanoid": "^5.1.6",
     "next": "16.0.5",
     "react": "19.2.0",
     "react-dom": "19.2.0"
