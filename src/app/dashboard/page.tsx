@@ -14,6 +14,13 @@ import Link from "next/link";
 import { nanoid } from "nanoid";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import dynamic from "next/dynamic";
+
+// Dynamically import the map to avoid SSR issues
+const AirQualityMap = dynamic(() => import("../../components/map/AirQualityMap"), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-2xl"></div>,
+});
 
 type AirData = {
   location: string;
@@ -610,6 +617,53 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Map Section */}
+      <section className="card initial-hidden animate-slide-up delay-500 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+              Air Quality Map
+            </p>
+            <h2 className="font-display text-xl text-slate-900">
+              Live pollution heatmap & stations
+            </h2>
+          </div>
+        </div>
+        <div className="h-96 w-full rounded-xl overflow-hidden shadow-inner">
+          <AirQualityMap
+            center={{ lat: coords.lat, lng: coords.lon }}
+            userLocation={{ lat: coords.lat, lng: coords.lon }}
+            airQualityData={[
+              {
+                lat: coords.lat,
+                lng: coords.lon,
+                pm25: air?.pm25 ?? undefined,
+                no2: air?.no2 ?? undefined,
+                co: air?.co ?? undefined,
+                aqi: risk.score,
+                location: air?.location ?? "Current Location"
+              }
+            ]}
+            nearbyStations={[
+              {
+                lat: coords.lat,
+                lng: coords.lon,
+                name: air?.location ?? "Current Station",
+                location: air?.city ?? "Kuala Lumpur",
+                aqi: risk.score,
+                pm25: air?.pm25,
+                no2: air?.no2,
+                co: air?.co
+              }
+            ]}
+            className="w-full h-full"
+          />
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          🗺️ Toggle layers (Street/Satellite/Terrain) • 🔥 Heatmap shows pollution density
+        </p>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
