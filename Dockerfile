@@ -17,8 +17,9 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
-# Default to dev mode
-CMD ["npm", "run", "dev"]
+# Default to dev mode - bind to 0.0.0.0 for Docker
+CMD ["npx", "next", "dev", "-H", "0.0.0.0"]
