@@ -174,11 +174,12 @@ async function searchByRadius(lat: number, lng: number, radiusKm: number = 100, 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { lat, lng, radius, limit, mode } = body;
+    const { lat, lng, lon, radius, limit, mode } = body;
+    const longitude = typeof lng === "number" ? lng : lon;
 
     // Handle different modes
     if (mode === "radius" || radius) {
-      if (typeof lat !== "number" || typeof lng !== "number") {
+      if (typeof lat !== "number" || typeof longitude !== "number") {
         return NextResponse.json(
           { error: "lat and lng are required numbers for radius search" },
           { status: 400 },
@@ -187,14 +188,14 @@ export async function POST(req: Request) {
 
       const radiusKm = radius || 100;
       const stationLimit = limit || 100;
-      const stations = await searchByRadius(lat, lng, radiusKm, stationLimit);
+      const stations = await searchByRadius(lat, longitude, radiusKm, stationLimit);
 
       return NextResponse.json({
         success: true,
         data: stations,
         summary: {
           centerLat: lat,
-          centerLng: lng,
+          centerLng: longitude,
           radiusKm,
           totalStations: stations.length,
           averageAQI: stations.filter(s => s.aqi).reduce((acc, s) => acc + (s.aqi || 0), 0) / stations.filter(s => s.aqi).length || 0,

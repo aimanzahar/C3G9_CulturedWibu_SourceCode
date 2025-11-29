@@ -1,0 +1,427 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChatMessage, HealthProfile, AirQualityContext } from '@/types/chat';
+import { useChat } from '@/contexts/ChatContext';
+import './ChatWidget.css';
+
+interface LocationState {
+  lat: number;
+  lng: number;
+  name?: string;
+  error?: string;
+  loading: boolean;
+}
+
+const ChatWidget: React.FC = () => {
+  const [isMounted, setIsMounted] = useState(false);
+  const [inputMessage, setInputMessage] = useState('');
+  const [location, setLocation] = useState<LocationState>({
+    lat: 3.1390, // Default: Kuala Lumpur
+    lng: 101.6869,
+    name: 'Kuala Lumpur',
+    loading: false,
+  });
+  const [hasAskedAboutHealth, setHasAskedAboutHealth] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    messages,
+    isOpen,
+    isLoading,
+    error,
+    openChat,
+    closeChat,
+    sendMessage,
+    updateHealthProfile,
+  } = useChat();
+
+  // Prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Check if we need to ask about respiratory conditions
+    const hasHealthMessage = messages.some(msg => 
+      msg.content.toLowerCase().includes('respiratory') || 
+      msg.content.toLowerCase().includes('breathing')
+    );
+    setHasAskedAboutHealth(hasHealthMessage);
+  }, [messages]);
+
+  useEffect(() => {
+    // Auto-scroll to bottom when new messages arrive
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // Get user location on mount (only on client)
+    if (isMounted) {
+      getUserLocation();
+    }
+  }, [isMounted]);
+
+  useEffect(() => {
+    // Focus input when chat opens
+    if (isOpen && inputRef.current && isMounted) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [isOpen, isMounted]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocation(prev => ({
+        ...prev,
+        error: 'Geolocation is not supported by your browser',
+      }));
+      return;
+    }
+
+    setLocation(prev => ({ ...prev, loading: true, error: undefined }));
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        // Get location name using reverse geocoding (optional enhancement)
+        const locationName = await getLocationName(latitude, longitude);
+        
+        setLocation({
+          lat: latitude,
+          lng: longitude,
+          name: locationName || 'Your Location',
+          loading: false,
+        });
+      },
+      (error) => {
+        // Improve error handling with meaningful messages
+        let errorMessage = 'Unable to get your location. Using default location.';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied. Using default location.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable. Using default location.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Using default location.';
+            break;
+          default:
+            errorMessage = `Location error: ${error.message || 'Unknown error'}. Using default location.`;
+            break;
+        }
+        
+        console.error('Error getting location:', error.message || error);
+        setLocation(prev => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }));
+      }
+    );
+  }, []);
+
+  const getLocationName = async (lat: number, lng: number): Promise<string | null> => {
+    try {
+      // Using Nominatim reverse geocoding API
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`,
+        {
+          headers: {
+            'User-Agent': 'AirQualityChat/1.0',
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.address?.city || data.address?.town || data.address?.county || data.address?.state || null;
+      }
+    } catch (error) {
+      console.error('Error getting location name:', error);
+    }
+    return null;
+  };
+
+  const handleSendMessage = useCallback(async () => {
+    const trimmedMessage = inputMessage.trim();
+    if (!trimmedMessage || isLoading) return;
+
+    // Clear input
+    setInputMessage('');
+
+    // Use ChatContext's sendMessage function
+    await sendMessage(trimmedMessage, { lat: location.lat, lng: location.lng });
+  }, [inputMessage, isLoading, sendMessage, location]);
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleClose = () => {
+    closeChat();
+  };
+
+  const formatMessage = (message: string) => {
+    // Simple formatting for line breaks - safe approach without dangerouslySetInnerHTML
+    return message
+      .split('\n')
+      .map((line, i) => {
+        return (
+          <p key={i}>{line}</p>
+        );
+      });
+  };
+
+  const formatTime = (timestamp: Date | string): string => {
+    try {
+      const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  const renderHealthPrompt = () => {
+    if (hasAskedAboutHealth || messages.length > 2) return null;
+    
+    return (
+      <div className="health-prompt">
+        <p>Do you have any respiratory conditions (e.g., asthma, COPD) that I should consider when giving air quality advice?</p>
+        <div className="health-buttons">
+          <button 
+            onClick={() => {
+              updateHealthProfile({
+                hasRespiratoryCondition: true,
+                conditions: ['asthma'],
+                sensitivityLevel: 'sensitive',
+              });
+              setHasAskedAboutHealth(true);
+            }}
+            className="health-button"
+          >
+            Yes
+          </button>
+          <button 
+            onClick={() => {
+              updateHealthProfile({
+                hasRespiratoryCondition: false,
+                conditions: [],
+                sensitivityLevel: 'normal',
+              });
+              setHasAskedAboutHealth(true);
+            }}
+            className="health-button"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAirQualityBadge = (airQuality?: AirQualityContext) => {
+    if (!airQuality) return null;
+    
+    const getAQIColor = (aqi: number) => {
+      if (aqi >= 75) return 'good';
+      if (aqi >= 45) return 'moderate';
+      return 'poor';
+    };
+
+    const colorClass = getAQIColor(airQuality.aqi);
+    
+    return (
+      <div className={`air-quality-badge ${colorClass}`}>
+        <span className="aqi-value">{airQuality.aqi}</span>
+        <span className="aqi-label">{airQuality.riskLevel}</span>
+      </div>
+    );
+  };
+
+  // Don't render until mounted on client
+  if (!isMounted) {
+    return null;
+  }
+
+  if (!isOpen) {
+    return (
+      <button
+        className="chat-fab"
+        onClick={openChat}
+        aria-label="Open chat"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+    );
+  }
+
+  return (
+    <div className="chat-widget">
+      <div className="chat-panel">
+        <div className="chat-header">
+          <div className="header-content">
+            <div className="header-title">
+              <div className="bot-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h2>Air Quality Assistant</h2>
+            </div>
+            {location.name && (
+              <div className="location-indicator">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.3639 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>{location.name}</span>
+              </div>
+            )}
+          </div>
+          <button className="close-button" onClick={handleClose} aria-label="Close chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="chat-messages">
+          {messages.length === 0 && (
+            <div className="welcome-message">
+              <div className="welcome-content">
+                <div className="welcome-avatar">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h3>Hello! I'm your Air Quality Assistant</h3>
+                <p>I can help you:</p>
+                <ul>
+                  <li>Check current air quality at your location</li>
+                  <li>Recommend safe routes and activities</li>
+                  <li>Provide personalized advice based on health conditions</li>
+                </ul>
+                <p>Ask me anything about air quality!</p>
+              </div>
+            </div>
+          )}
+          
+          {messages.map((message) => (
+            <div key={message.id} className={`message ${message.role}`}>
+              {message.role === 'assistant' && (
+                <div className="message-avatar">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+              <div className="message-bubble">
+                <div className="message-content">
+                  {formatMessage(message.content)}
+                </div>
+                {message.metadata?.airQualityData && renderAirQualityBadge(message.metadata.airQualityData)}
+                <div className="message-timestamp">
+                  {formatTime(message.timestamp)}
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {renderHealthPrompt()}
+          
+          {isLoading && (
+            <div className="message assistant">
+              <div className="message-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="message-bubble">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="error-message">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" strokeWidth="2"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              {error}
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="chat-input">
+          {location.error && (
+            <div className="location-error">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+                <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              {location.error}
+              <button onClick={getUserLocation} className="retry-button">
+                Retry
+              </button>
+            </div>
+          )}
+          <div className="input-container">
+            <textarea
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about air quality..."
+              rows={1}
+              disabled={isLoading}
+              className="message-input"
+            />
+            <button 
+              className="send-button" 
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              aria-label="Send message"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatWidget;

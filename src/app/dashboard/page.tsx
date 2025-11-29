@@ -34,6 +34,9 @@ import type {
   AirQualityStation as StationType
 } from "../../types/airQuality";
 import { getRadiusFromZoom, formatRadius, getZoomFromRadius } from '@/lib/radiusUtils';
+import { ChatProvider } from "@/contexts/ChatContext";
+import ChatWidget from "@/components/chat/ChatWidget";
+import ChatErrorBoundary from "@/components/chat/ChatErrorBoundary";
 
 // Dynamically import the map to avoid SSR issues
 const AirQualityMap = dynamic(() => import("../../components/map/AirQualityMap"), {
@@ -352,7 +355,8 @@ export default function Home() {
       const res = await fetch("/api/air-quality", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon }),
+        // API expects `lng` - map our `lon` variable to match
+        body: JSON.stringify({ lat, lng: lon }),
       });
       const data = await res.json();
 
@@ -589,7 +593,8 @@ export default function Home() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10 md:px-10 lg:px-14">
+    <ChatProvider>
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10 md:px-10 lg:px-14">
       <header className="initial-hidden animate-slide-down flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="pill inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-600">
@@ -1226,6 +1231,13 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </main>
+      {/* Chat Widget */}
+      <ChatErrorBoundary>
+        <ChatWidget />
+      </ChatErrorBoundary>
+      
+      
+      </main>
+    </ChatProvider>
   );
 }

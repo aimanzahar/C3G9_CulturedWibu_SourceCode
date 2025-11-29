@@ -14,8 +14,9 @@ async function fetchFromDOE(lat: number, lng: number, radius?: number, bounds?: 
       ? "/api/doe"
       : "/api/doe";
 
+    // DOE route expects lat/lng
     const body = bounds
-      ? { mode: "bounds", bounds, limit }
+      ? { mode: "bounds", bounds, limit, lat, lng }
       : { lat, lng, radius: radius || 100, limit };
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${url}`, {
@@ -43,6 +44,7 @@ async function fetchFromWAQI(lat: number, lng: number, radius?: number, bounds?:
       ? "/api/waqi"
       : "/api/waqi";
 
+    // WAQI route expects lon, so map lng accordingly
     const body = bounds
       ? { mode: "bounds", bounds, limit }
       : { lat, lon: lng, radius: radius || 100, limit };

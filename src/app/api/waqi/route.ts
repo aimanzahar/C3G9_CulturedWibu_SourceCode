@@ -161,11 +161,12 @@ async function getSingleStation(lat: number, lon: number): Promise<AirQualitySta
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { lat, lon, radius, limit, mode } = body;
+    const { lat, lon, lng, radius, limit, mode } = body;
+    const longitude = typeof lon === "number" ? lon : lng;
     
-    if (typeof lat !== "number" || typeof lon !== "number") {
+    if (typeof lat !== "number" || typeof longitude !== "number") {
       return NextResponse.json(
-        { error: "lat and lon are required numbers" },
+        { error: "lat and lon/lng are required numbers" },
         { status: 400 },
       );
     }
@@ -174,14 +175,14 @@ export async function POST(req: Request) {
     if (mode === "radius" || radius) {
       const radiusKm = radius || 100;
       const stationLimit = limit || 100;
-      const stations = await searchByRadius(lat, lon, radiusKm, stationLimit);
+      const stations = await searchByRadius(lat, longitude, radiusKm, stationLimit);
       
       return NextResponse.json({
         success: true,
         data: stations,
         summary: {
           centerLat: lat,
-          centerLng: lon,
+          centerLng: longitude,
           radiusKm,
           totalStations: stations.length,
           averageAQI: stations.reduce((acc, s) => acc + (s.aqi || 0), 0) / stations.length || 0,
@@ -223,7 +224,7 @@ export async function POST(req: Request) {
     }
     else {
       // Default: single station (backward compatibility)
-      const station = await getSingleStation(lat, lon);
+      const station = await getSingleStation(lat, longitude);
       if (!station) {
         return NextResponse.json({ error: "WAQI returned no data" }, { status: 502 });
       }
