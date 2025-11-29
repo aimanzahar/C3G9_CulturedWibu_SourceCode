@@ -13,6 +13,11 @@ interface LocationState {
   loading: boolean;
 }
 
+interface WidgetDimensions {
+  width: number;
+  height: number;
+}
+
 const ChatWidget: React.FC = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -23,9 +28,21 @@ const ChatWidget: React.FC = () => {
     loading: false,
   });
   const [hasAskedAboutHealth, setHasAskedAboutHealth] = useState(false);
+  const [widgetDimensions, setWidgetDimensions] = useState<WidgetDimensions>({
+    width: 360,
+    height: 520,
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatWidgetRef = useRef<HTMLDivElement>(null);
 
   const {
     messages,
@@ -38,6 +55,37 @@ const ChatWidget: React.FC = () => {
     updateHealthProfile,
     clearChat,
   } = useChat();
+
+  // Load saved dimensions from localStorage on mount
+  useEffect(() => {
+    if (isMounted) {
+      const savedDimensions = localStorage.getItem('chat-widget-dimensions');
+      if (savedDimensions) {
+        try {
+          const dimensions = JSON.parse(savedDimensions);
+          setWidgetDimensions({
+            width: Math.max(320, Math.min(600, dimensions.width || 360)),
+            height: Math.max(400, Math.min(800, dimensions.height || 520)),
+          });
+        } catch (error) {
+          console.error('Failed to parse saved dimensions:', error);
+        }
+      }
+    }
+  }, [isMounted]);
+
+  // Save dimensions to localStorage when they change
+  useEffect(() => {
+    if (isMounted && !isResizing) {
+      localStorage.setItem(
+        'chat-widget-dimensions',
+        JSON.stringify({
+          width: widgetDimensions.width,
+          height: widgetDimensions.height,
+        })
+      );
+    }
+  }, [widgetDimensions, isMounted, isResizing]);
 
   // Prevent hydration issues
   useEffect(() => {
@@ -203,6 +251,65 @@ const ChatWidget: React.FC = () => {
     }
   };
 
+  const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    
+    const rect = chatWidgetRef.current?.getBoundingClientRect();
+    if (rect) {
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+  };
+
+  const handleResize = useCallback((e: globalThis.MouseEvent) => {
+    if (!isResizing) return;
+
+    const deltaX = resizeStart.x - e.clientX;
+    const deltaY = resizeStart.y - e.clientY;
+
+    const newWidth = Math.min(
+      Math.max(320, resizeStart.width + deltaX),
+      Math.min(600, window.innerWidth - 48)
+    );
+    
+    const newHeight = Math.min(
+      Math.max(400, resizeStart.height + deltaY),
+      Math.min(800, window.innerHeight - 120)
+    );
+
+    setWidgetDimensions({
+      width: newWidth,
+      height: newHeight,
+    });
+  }, [isResizing, resizeStart]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // Global mouse event listeners for resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResize);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'nw-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizing, handleResize, handleResizeEnd]);
+
   const renderHealthPrompt = () => {
     if (hasAskedAboutHealth || messages.length > 2) return null;
     
@@ -280,8 +387,17 @@ const ChatWidget: React.FC = () => {
   }
 
   return (
-    <div className="chat-widget">
-      <div className="chat-panel">
+    <div className={`chat-widget ${isResizing ? 'resizing' : ''}`} ref={chatWidgetRef}>
+      <div
+        className="chat-panel"
+        style={{
+          width: `${widgetDimensions.width}px`,
+          height: `${widgetDimensions.height}px`,
+          maxWidth: `calc(100vw - 48px)`,
+          maxHeight: `calc(100vh - 120px)`,
+        }}
+      >
+        <div className="resize-handle" onMouseDown={handleResizeStart} />
         <div className="chat-header">
           <div className="header-content">
             <div className="header-title">

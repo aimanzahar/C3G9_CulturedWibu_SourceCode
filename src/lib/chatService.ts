@@ -288,7 +288,7 @@ Would you like to know about [follow-up suggestion]?"`;
           model: this.config.model,
           messages: messages as OpenAI.ChatCompletionMessageParam[],
           temperature: 0.7,
-          max_tokens: 1000,
+          max_tokens: 32768,
         });
 
         // Log the full response structure for debugging
@@ -301,9 +301,13 @@ Would you like to know about [follow-up suggestion]?"`;
         // Try content first
         aiMessage = message?.content || undefined;
         
-        // If content is empty string, use reasoning_content
-        if (!aiMessage && (message as any)?.reasoning_content) {
-          aiMessage = (message as any).reasoning_content;
+        // For thinking models, content should contain the actual response
+        // reasoning_content contains internal thinking that should NOT be shown to users
+        if (aiMessage === '') {
+          // Empty content indicates the model might not be configured properly
+          // or the response format is different
+          console.warn('Model returned empty content - this may indicate a configuration issue');
+          aiMessage = undefined;
         }
         
         // Check for alternative formats in thinking models
@@ -314,13 +318,11 @@ Would you like to know about [follow-up suggestion]?"`;
             // Check for various possible fields
             // Handle thinking field which might be an object
             if (choice.thinking && typeof choice.thinking === 'object' && choice.thinking.content) {
-              aiMessage = choice.thinking.content;
+              // Never use thinking content as it contains internal AI reasoning
+              aiMessage = undefined;
             } else {
-              aiMessage = choice.thinking ||
-                         choice.reasoning ||
-                         choice.text ||
-                         choice.message?.thinking ||
-                         choice.message?.reasoning;
+              // Never use thinking/reasoning content as they contain internal AI processes
+              aiMessage = undefined;
             }
           }
         }
@@ -338,7 +340,7 @@ Would you like to know about [follow-up suggestion]?"`;
             model: this.config.model,
             messages: messages,
             temperature: 0.7,
-            max_tokens: 1000,
+            max_tokens: 32768,
           }),
         });
 
@@ -356,9 +358,12 @@ Would you like to know about [follow-up suggestion]?"`;
         const responseAny = completion as any;
         aiMessage = responseAny.choices?.[0]?.message?.content;
         
-        // Try reasoning_content if content is empty (for gemini-3-pro-preview-thinking)
+        // IMPORTANT: NEVER use reasoning_content - it contains internal thinking
+        // If content is empty, this indicates the model may have hit length limits
+        // or needs different configuration
         if (!aiMessage && responseAny.choices?.[0]?.message?.reasoning_content) {
-          aiMessage = responseAny.choices[0].message.reasoning_content;
+          console.warn('Model returned reasoning_content instead of content - model may need configuration adjustment');
+          // Don't use reasoning_content as it contains internal thinking
         }
         
         // Check for thinking model specific fields
@@ -367,40 +372,24 @@ Would you like to know about [follow-up suggestion]?"`;
           if (choice) {
             const message = choice.message;
             
-            // For thinking models, they might have both thinking and content
-            if (message?.thinking && message?.content) {
-              // Use the actual response content, not the thinking
+            // For thinking models, content should contain the actual response
+            // NEVER use thinking, reasoning, or reasoning_content fields as they contain internal AI thinking
+            if (message?.content) {
+              // Use the actual response content
               aiMessage = message.content;
-            } else {
-              // Try other possible fields
-              // Handle thinking field which might be an object
-              if (message?.thinking && typeof message.thinking === 'object' && message.thinking.content) {
-                aiMessage = message.thinking.content;
-              } else {
-                aiMessage = choice.thinking ||
-                           choice.reasoning ||
-                           choice.text ||
-                           message?.thinking ||
-                           message?.reasoning ||
-                           message?.analysis;
-              }
-            }
-            
-            // Some thinking models might return thinking as a structured object
-            if (!aiMessage && message?.thinking?.content) {
-              aiMessage = message.thinking.content;
-            }
-            
-            // Check if the entire choice is just a string (rare case)
-            if (!aiMessage && typeof choice === 'string') {
-              aiMessage = choice;
-            }
-            
-            // Check if message itself is a string
-            if (!aiMessage && typeof message === 'string') {
-              aiMessage = message;
             }
           }
+          
+          // No fallback to thinking/reasoning content - these contain internal AI processes
+          // If we reach here, it means the model didn't provide actual response content
+          
+          // Check if the entire choice is just a string (rare case)
+          if (!aiMessage && typeof choice === 'string') {
+            aiMessage = choice;
+          }
+          
+          // Check if message itself is a string
+          // This case was already handled above, so we don't need this duplicate check
         }
       }
 
@@ -413,7 +402,9 @@ Would you like to know about [follow-up suggestion]?"`;
           choiceKeys: responseAny?.choices?.[0] ? Object.keys(responseAny.choices[0]) : [],
           messageKeys: responseAny?.choices?.[0]?.message ? Object.keys(responseAny.choices[0].message) : []
         });
-        throw new Error('No response from AI service');
+        
+        // Provide a fallback message instead of throwing an error
+        aiMessage = "I apologize, but I couldn't generate a response. This might be due to the model configuration. Please try again.";
       }
       
       console.log('Successfully extracted AI message (first 200 chars):',
