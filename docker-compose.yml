@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
     container_name: air-app
     environment:
       NODE_ENV: production
