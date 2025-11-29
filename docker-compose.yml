@@ -5,6 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
+        NEXT_PUBLIC_CONVEX_SELF_HOSTED_URL: "https://convex.zahar.my"
+        CONVEX_SITE_URL: "https://convex.zahar.my"
+        CONVEX_SELF_HOSTED_URL: "https://convex.zahar.my"
     container_name: air-app
     environment:
       NODE_ENV: production
@@ -12,9 +17,9 @@ services:
       PORT: "3000"
       # Convex configuration
       NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
+      CONVEX_SELF_HOSTED_URL: "https://convex.zahar.my"
       CONVEX_DEPLOY_KEY: ${CONVEX_DEPLOY_KEY}
-      # Optional: Add your Convex admin key if needed for additional operations
-      CONVEX_ADMIN_KEY: ${CONVEX_ADMIN_KEY}
+      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_DEPLOY_KEY}
     ports:
       - "3000:3000"
     restart: unless-stopped
