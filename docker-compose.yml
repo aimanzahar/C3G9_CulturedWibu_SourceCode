@@ -10,6 +10,7 @@ services:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: "1"
       PORT: "3000"
+      NODE_OPTIONS: "--max-old-space-size=4096"
       # Convex configuration
       NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
       CONVEX_SELF_HOSTED_URL: "https://convex.zahar.my"
