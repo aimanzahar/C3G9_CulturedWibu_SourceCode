@@ -37,6 +37,7 @@ import { getRadiusFromZoom, formatRadius, getZoomFromRadius } from '@/lib/radius
 import { ChatProvider } from "@/contexts/ChatContext";
 import ChatWidget from "@/components/chat/ChatWidget";
 import ChatErrorBoundary from "@/components/chat/ChatErrorBoundary";
+import AirQualityComparison from "@/components/analytics/AirQualityComparison";
 
 // Dynamically import the map to avoid SSR issues
 const AirQualityMap = dynamic(() => import("../../components/map/AirQualityMap"), {
@@ -1231,6 +1232,22 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Air Quality Analytics Section */}
+      {userKey && (
+        <section className="mt-4">
+          <AirQualityComparison
+            userKey={userKey}
+            currentAqi={air?.aqi}
+            currentLocation={air?.location}
+            currentLat={coords.lat}
+            currentLng={coords.lon}
+            currentPm25={air?.pm25 ?? undefined}
+            currentNo2={air?.no2 ?? undefined}
+            currentSource={air?.source}
+          />
+        </section>
+      )}
       </main>
       
       {/* Chat Widget - Outside main for proper fixed positioning */}

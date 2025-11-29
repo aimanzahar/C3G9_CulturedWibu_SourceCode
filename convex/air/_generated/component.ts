@@ -23,6 +23,64 @@ import type { FunctionReference } from "convex/server";
  */
 export type ComponentApi<Name extends string | undefined = string | undefined> =
   {
+    airQualityHistory: {
+      compareLocations: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any,
+        Name
+      >;
+      getDailyAverages: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any,
+        Name
+      >;
+      getLocationHistory: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; locationName: string; userKey: string },
+        any,
+        Name
+      >;
+      getStatsSummary: FunctionReference<
+        "query",
+        "internal",
+        { userKey: string },
+        any,
+        Name
+      >;
+      getUserHistory: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any,
+        Name
+      >;
+      storeReading: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          aqi: number;
+          co?: number;
+          lat: number;
+          lng: number;
+          locationName: string;
+          no2?: number;
+          o3?: number;
+          pm10?: number;
+          pm25?: number;
+          riskLevel: string;
+          so2?: number;
+          source: string;
+          userKey: string;
+        },
+        any,
+        Name
+      >;
+    };
     auth: {
       login: FunctionReference<
         "mutation",

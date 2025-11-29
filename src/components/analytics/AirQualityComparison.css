@@ -1,0 +1,371 @@
+/* Air Quality Comparison Panel Styles */
+
+.aq-comparison-collapsed {
+  margin-top: 1rem;
+}
+
+.aq-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aq-expand-btn:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.aq-expand-btn svg {
+  color: #3b82f6;
+}
+
+.aq-mini-stat {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.aq-mini-stat strong {
+  font-weight: 600;
+}
+
+/* Main Panel */
+.aq-comparison-panel {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 1.25rem;
+  margin-top: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+/* Header */
+.aq-comparison-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.aq-header-left h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.aq-header-left h3 svg {
+  color: #3b82f6;
+}
+
+.aq-subtitle {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.aq-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aq-close-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Stats Grid */
+.aq-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .aq-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.aq-stat-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.aq-stat-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aq-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.aq-stat-sub {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 0.125rem;
+}
+
+.aq-stat-empty {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Controls */
+.aq-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.aq-time-selector,
+.aq-chart-selector {
+  display: flex;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.aq-time-selector button,
+.aq-chart-selector button {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aq-chart-selector button {
+  padding: 0.375rem 0.5rem;
+}
+
+.aq-time-selector button:hover,
+.aq-chart-selector button:hover {
+  color: #475569;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.aq-time-selector button.active,
+.aq-chart-selector button.active {
+  color: #1e293b;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart Container */
+.aq-chart-container {
+  margin-bottom: 1rem;
+}
+
+.aq-chart {
+  background: #fafbfc;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #f1f5f9;
+}
+
+.aq-chart h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.aq-no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #94a3b8;
+}
+
+.aq-no-data p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.aq-no-data-hint {
+  font-size: 0.75rem !important;
+  margin-top: 0.5rem !important;
+  color: #cbd5e1;
+}
+
+/* Location List */
+.aq-location-list {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1rem;
+}
+
+.aq-location-list h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.aq-locations-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.aq-location-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.aq-location-item:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.aq-location-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.aq-location-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aq-location-readings {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.aq-location-aqi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aq-aqi-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  border-radius: 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.aq-aqi-range {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+/* Recharts Tooltip Override */
+.recharts-tooltip-wrapper {
+  z-index: 1000;
+}
+
+/* Scrollbar Styling */
+.aq-locations-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.aq-locations-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.aq-locations-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.aq-locations-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .aq-comparison-panel {
+    padding: 1rem;
+  }
+  
+  .aq-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .aq-time-selector,
+  .aq-chart-selector {
+    justify-content: center;
+  }
+  
+  .aq-time-selector button {
+    flex: 1;
+    text-align: center;
+  }
+}

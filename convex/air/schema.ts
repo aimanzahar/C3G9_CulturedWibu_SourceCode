@@ -43,4 +43,27 @@ export default defineSchema({
     tips: v.array(v.string()),
     score: v.number(),
   }).index("by_profile", ["profileId"]),
+
+  // Air quality history for graphs and comparison
+  airQualityHistory: defineTable({
+    userKey: v.string(),
+    lat: v.number(),
+    lng: v.number(),
+    locationName: v.string(),
+    aqi: v.number(),
+    pm25: v.optional(v.number()),
+    pm10: v.optional(v.number()),
+    no2: v.optional(v.number()),
+    co: v.optional(v.number()),
+    o3: v.optional(v.number()),
+    so2: v.optional(v.number()),
+    source: v.string(),
+    riskLevel: v.string(),
+    timestamp: v.number(),
+    date: v.string(), // ISO date for grouping (yyyy-mm-dd)
+  })
+    .index("by_userKey", ["userKey"])
+    .index("by_userKey_location", ["userKey", "locationName"])
+    .index("by_date", ["date"])
+    .index("by_timestamp", ["timestamp"]),
 });

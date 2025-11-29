@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as airHistory from "../airHistory.js";
 import type * as auth from "../auth.js";
 import type * as passport from "../passport.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  airHistory: typeof airHistory;
   auth: typeof auth;
   passport: typeof passport;
 }>;
@@ -50,6 +52,58 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   air: {
+    airQualityHistory: {
+      compareLocations: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any
+      >;
+      getDailyAverages: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any
+      >;
+      getLocationHistory: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; locationName: string; userKey: string },
+        any
+      >;
+      getStatsSummary: FunctionReference<
+        "query",
+        "internal",
+        { userKey: string },
+        any
+      >;
+      getUserHistory: FunctionReference<
+        "query",
+        "internal",
+        { days?: number; userKey: string },
+        any
+      >;
+      storeReading: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          aqi: number;
+          co?: number;
+          lat: number;
+          lng: number;
+          locationName: string;
+          no2?: number;
+          o3?: number;
+          pm10?: number;
+          pm25?: number;
+          riskLevel: string;
+          so2?: number;
+          source: string;
+          userKey: string;
+        },
+        any
+      >;
+    };
     auth: {
       login: FunctionReference<
         "mutation",
