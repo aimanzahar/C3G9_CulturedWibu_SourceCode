@@ -426,6 +426,25 @@ export async function POST(request: NextRequest) {
 
     // Use healthProfile if available, otherwise fall back to userProfile
     const profile = healthProfile || userProfile;
+    
+    // Log health profile details
+    if (healthProfile) {
+      console.log(`[AI-Health] ✓ Full health profile included:`);
+      console.log(`  - Name: ${healthProfile.name || 'Not set'}`);
+      console.log(`  - Age: ${healthProfile.age || 'Not set'}`);
+      console.log(`  - Respiratory condition: ${healthProfile.hasRespiratoryCondition ? 'Yes' : 'No'}`);
+      if (healthProfile.conditions?.length) {
+        console.log(`  - Conditions: ${healthProfile.conditions.join(', ')}`);
+      }
+      console.log(`  - Activity level: ${healthProfile.activityLevel || 'Not set'}`);
+      console.log(`  - Outdoor exposure: ${healthProfile.outdoorExposure || 'Not set'}`);
+    } else if (userProfile) {
+      console.log(`[AI-Health] ⚠ Using basic user profile (limited data)`);
+      console.log(`  - Age: ${userProfile.age || 'Not set'}`);
+      console.log(`  - Respiratory condition: ${userProfile.hasRespiratoryCondition ? 'Yes' : 'No'}`);
+    } else {
+      console.log(`[AI-Health] ⚠ No health profile provided - using generic recommendations`);
+    }
 
     // Fetch current air quality if not provided
     let airQuality = airQualityData || null;

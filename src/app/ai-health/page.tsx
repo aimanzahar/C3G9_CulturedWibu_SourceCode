@@ -17,11 +17,15 @@ import {
   ArrowRightIcon,
   CheckCircleIcon,
   ArrowPathIcon,
+  UserIcon,
+  HomeIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import Navbar from '@/components/navigation/Navbar';
 import HealthProfileForm from '@/components/health/HealthProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 interface HealthInsight {
@@ -66,26 +70,54 @@ export default function AIHealthPage() {
   const userKey = user?.email || '';
 
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false, only true when actually fetching
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [predictions, setPredictions] = useState<HealthPredictionResponse | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [showProfileForm, setShowProfileForm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Check if user has completed health profile
   const healthProfileCheck = useQuery(api.healthProfile.isHealthProfileComplete, userKey ? { userKey } : 'skip');
+  
+  // Mutation to delete/reset health profile
+  const deleteHealthProfile = useMutation(api.healthProfile.deleteHealthProfile);
 
-  const fetchPredictions = useCallback(async (lat: number, lng: number) => {
+  // Handle reset profile
+  const handleResetProfile = async () => {
+    if (!userKey) return;
+    setIsResetting(true);
+    try {
+      await deleteHealthProfile({ userKey });
+      setShowResetConfirm(false);
+      setPredictions(null); // Clear predictions when resetting
+      setShowProfileForm(true); // Show the form again to refill
+    } catch (err) {
+      console.error('Error resetting profile:', err);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const fetchPredictions = useCallback(async (lat: number, lng: number, profile?: typeof healthProfileCheck) => {
+    // Don't fetch if profile is not complete
+    if (!profile?.exists || !profile?.isComplete) {
+      console.log('[AI-Health] Skipping AI generation - profile not complete');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const requestBody: any = { lat, lng };
+      const requestBody: { lat: number; lng: number; healthProfile?: typeof profile.profile } = { lat, lng };
 
-      // Include health profile data if available
-      if (healthProfileCheck?.profile) {
-        requestBody.healthProfile = healthProfileCheck.profile;
+      // Include health profile data
+      if (profile?.profile) {
+        requestBody.healthProfile = profile.profile;
+        console.log('[AI-Health] Including health profile in request:', profile.profile.name || 'Anonymous');
       }
 
       const response = await fetch('/api/ai-health', {
@@ -109,53 +141,61 @@ export default function AIHealthPage() {
     }
   }, []);
 
-  // Check health profile completion
+  // Check health profile completion and show form if needed
   useEffect(() => {
-    if (healthProfileCheck && !healthProfileCheck.exists) {
-      setShowProfileForm(true);
-    } else if (healthProfileCheck && !healthProfileCheck.isComplete) {
+    if (healthProfileCheck === undefined) {
+      // Still loading
+      return;
+    }
+    
+    if (!healthProfileCheck.exists || !healthProfileCheck.isComplete) {
       setShowProfileForm(true);
     }
   }, [healthProfileCheck]);
 
+  // Get location only once on mount
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setLocation({ lat: latitude, lng: longitude });
-          fetchPredictions(latitude, longitude);
         },
         (err) => {
           console.error('Geolocation error:', err);
           // Default to Kuala Lumpur
-          const defaultLat = 3.139;
-          const defaultLng = 101.6869;
-          setLocation({ lat: defaultLat, lng: defaultLng });
-          fetchPredictions(defaultLat, defaultLng);
+          setLocation({ lat: 3.139, lng: 101.6869 });
         }
       );
     } else {
       // Default to Kuala Lumpur
-      const defaultLat = 3.139;
-      const defaultLng = 101.6869;
-      setLocation({ lat: defaultLat, lng: defaultLng });
-      fetchPredictions(defaultLat, defaultLng);
+      setLocation({ lat: 3.139, lng: 101.6869 });
     }
-  }, [fetchPredictions]);
+  }, []);
+
+  // Fetch predictions only when profile is complete AND we have location
+  useEffect(() => {
+    if (location && healthProfileCheck?.exists && healthProfileCheck?.isComplete && !predictions) {
+      console.log('[AI-Health] Profile complete, fetching predictions...');
+      fetchPredictions(location.lat, location.lng, healthProfileCheck);
+    }
+  }, [location, healthProfileCheck, predictions, fetchPredictions]);
 
   const handleRefresh = () => {
-    if (location) {
-      fetchPredictions(location.lat, location.lng);
+    if (location && healthProfileCheck?.exists && healthProfileCheck?.isComplete) {
+      fetchPredictions(location.lat, location.lng, healthProfileCheck);
     }
   };
 
   const handleProfileComplete = () => {
     setShowProfileForm(false);
-    // Refetch predictions with updated profile
-    if (location) {
-      fetchPredictions(location.lat, location.lng);
-    }
+    // Refetch predictions with updated profile after a short delay to let the query update
+    setTimeout(() => {
+      if (location) {
+        // Force refetch by clearing predictions first
+        setPredictions(null);
+      }
+    }, 500);
   };
 
   const healthScore = predictions?.healthScore ?? 0;
@@ -180,6 +220,49 @@ export default function AIHealthPage() {
         {showProfileForm && userKey && (
           <HealthProfileForm onComplete={handleProfileComplete} />
         )}
+
+        {/* Reset Confirmation Modal */}
+        {showResetConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-rose-100 rounded-full">
+                  <TrashIcon className="h-6 w-6 text-rose-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Reset Health Profile?</h3>
+              </div>
+              <p className="text-slate-600 mb-6">
+                This will delete your current health profile and you&apos;ll need to fill in your information again. This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetProfile}
+                  disabled={isResetting}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isResetting ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    <>
+                      <TrashIcon className="h-4 w-4" />
+                      Reset Profile
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mx-auto max-w-6xl px-4 py-8 md:px-10">
           {/* Hero Section */}
           <section className="mb-8">
@@ -217,6 +300,48 @@ export default function AIHealthPage() {
             </div>
           )}
 
+          {/* Profile Required State - Show when profile is not complete */}
+          {!loading && !predictions && healthProfileCheck !== undefined && (!healthProfileCheck.exists || !healthProfileCheck.isComplete) && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="card rounded-2xl p-8 max-w-lg text-center bg-gradient-to-br from-purple-50 to-sky-50 border border-purple-100">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500 to-sky-500 rounded-full flex items-center justify-center mb-6">
+                  <UserIcon className="h-10 w-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                  Complete Your Health Profile
+                </h2>
+                <p className="text-slate-600 mb-6">
+                  To provide personalized AI health insights and recommendations, we need to know a bit about your health. Please complete your health profile to unlock:
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <CheckCircleIcon className="h-5 w-5 text-emerald-500" />
+                    <span>Personalized risk assessment</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <CheckCircleIcon className="h-5 w-5 text-emerald-500" />
+                    <span>Condition-specific advice</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <CheckCircleIcon className="h-5 w-5 text-emerald-500" />
+                    <span>Activity recommendations</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <CheckCircleIcon className="h-5 w-5 text-emerald-500" />
+                    <span>Air quality alerts</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowProfileForm(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-sky-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
+                >
+                  <UserIcon className="h-5 w-5" />
+                  {healthProfileCheck?.exists ? 'Complete Profile' : 'Create Health Profile'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {loading && !predictions && (
             <div className="flex flex-col items-center justify-center py-20">
@@ -233,8 +358,8 @@ export default function AIHealthPage() {
                 </div>
               </div>
               <div className="mt-6 text-center">
-                <p className="text-lg font-medium text-slate-700">AI is analyzing air quality data...</p>
-                <p className="text-sm text-slate-500 mt-1">Generating personalized health insights</p>
+                <p className="text-lg font-medium text-slate-700">AI is analyzing your health profile...</p>
+                <p className="text-sm text-slate-500 mt-1">Generating personalized health insights for {healthProfileCheck?.profile?.name || 'you'}</p>
                 <div className="flex items-center justify-center gap-1 mt-4">
                   <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -398,6 +523,185 @@ export default function AIHealthPage() {
               </div>
             </div>
           </section>
+
+          {/* Your Health Profile - Self Reference (prominently placed after score) */}
+          {healthProfileCheck?.exists && healthProfileCheck?.profile && (
+            <section className="mb-8">
+              <div className="card rounded-2xl p-6 bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="h-5 w-5 text-teal-600" />
+                    <h2 className="text-lg font-semibold text-slate-900">Your Health Profile</h2>
+                    {healthProfileCheck.isComplete && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                        Complete
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowProfileForm(true)}
+                      className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-medium px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(true)}
+                      className="flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700 font-medium px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600 mb-4">
+                  Your health profile helps our AI provide personalized air quality recommendations.
+                </p>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Basic Info */}
+                  <div className="bg-white/80 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserIcon className="h-4 w-4 text-teal-600" />
+                      <span className="text-sm font-semibold text-slate-700">Basic Info</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {healthProfileCheck.profile.name && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Name</span>
+                          <span className="text-slate-900 font-medium">{healthProfileCheck.profile.name}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Age Group</span>
+                        <span className="text-slate-900 font-medium capitalize">
+                          {healthProfileCheck.profile.age || 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Gender</span>
+                        <span className="text-slate-900 font-medium capitalize">
+                          {healthProfileCheck.profile.gender?.replace('-', ' ') || 'Not set'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health Conditions */}
+                  <div className="bg-white/80 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <HeartIcon className="h-4 w-4 text-rose-500" />
+                      <span className="text-sm font-semibold text-slate-700">Health Conditions</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Respiratory</span>
+                        <span className={`font-medium ${healthProfileCheck.profile.hasRespiratoryCondition ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          {healthProfileCheck.profile.hasRespiratoryCondition ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {healthProfileCheck.profile.conditions && healthProfileCheck.profile.conditions.length > 0 && (
+                        <div>
+                          <span className="text-slate-500">Conditions:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {healthProfileCheck.profile.conditions.map((condition: string) => (
+                              <span key={condition} className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                {condition}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {healthProfileCheck.profile.conditionSeverity && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Severity</span>
+                          <span className="text-slate-900 font-medium capitalize">
+                            {healthProfileCheck.profile.conditionSeverity}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Heart Condition</span>
+                        <span className={`font-medium ${healthProfileCheck.profile.hasHeartCondition ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          {healthProfileCheck.profile.hasHeartCondition ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lifestyle & Environment */}
+                  <div className="bg-white/80 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <HomeIcon className="h-4 w-4 text-sky-500" />
+                      <span className="text-sm font-semibold text-slate-700">Lifestyle & Environment</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Activity Level</span>
+                        <span className="text-slate-900 font-medium capitalize">
+                          {healthProfileCheck.profile.activityLevel || 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Outdoor Exposure</span>
+                        <span className="text-slate-900 font-medium capitalize">
+                          {healthProfileCheck.profile.outdoorExposure || 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Near Traffic</span>
+                        <span className={`font-medium ${healthProfileCheck.profile.livesNearTraffic ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          {healthProfileCheck.profile.livesNearTraffic ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Air Purifier</span>
+                        <span className={`font-medium ${healthProfileCheck.profile.hasAirPurifier ? 'text-emerald-600' : 'text-slate-500'}`}>
+                          {healthProfileCheck.profile.hasAirPurifier ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medications if any */}
+                {healthProfileCheck.profile.medications && healthProfileCheck.profile.medications.length > 0 && (
+                  <div className="mt-4 bg-white/80 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldCheckIcon className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-semibold text-slate-700">Medications</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {healthProfileCheck.profile.medications.map((med: string) => (
+                        <span key={med} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                          {med}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Risk Assessment based on profile */}
+                <div className="mt-4 p-4 bg-gradient-to-r from-teal-100/50 to-cyan-100/50 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-white rounded-lg">
+                      <SparklesIcon className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 mb-1">Personalized Risk Assessment</h4>
+                      <p className="text-sm text-slate-600">
+                        {healthProfileCheck.profile.hasRespiratoryCondition
+                          ? `Based on your respiratory conditions (${healthProfileCheck.profile.conditions?.join(', ') || 'various'}), we recommend extra caution when AQI exceeds 100. ${healthProfileCheck.profile.outdoorExposure === 'high' ? 'Your high outdoor exposure increases risk - consider reducing outdoor time during peak pollution hours.' : ''}`
+                          : healthProfileCheck.profile.age === 'senior' || healthProfileCheck.profile.age === 'child'
+                          ? `As a ${healthProfileCheck.profile.age === 'senior' ? 'senior adult' : 'child'}, you may be more sensitive to air pollution. We will prioritize alerts when conditions worsen.`
+                          : 'Your profile indicates normal sensitivity to air pollution. We will provide standard recommendations based on current air quality.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Pollutant Predictions */}
           <section className="mb-8">

@@ -1,16 +1,18 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { components } from "./_generated/api";
+
+// ============================================================================
+// Health Profile Functions - Wrappers for Air Component
+// These functions expose the air component's health profile functionality
+// as public functions accessible from the client.
+// ============================================================================
 
 // Get health profile for a user
 export const getHealthProfile = query({
   args: { userKey: v.string() },
   handler: async (ctx, args) => {
-    const profile = await ctx.db
-      .query("healthProfiles")
-      .withIndex("by_userKey", (q) => q.eq("userKey", args.userKey))
-      .unique();
-    
-    return profile;
+    return await ctx.runQuery(components.air.healthProfile.getHealthProfile, args);
   },
 });
 
@@ -18,18 +20,7 @@ export const getHealthProfile = query({
 export const isHealthProfileComplete = query({
   args: { userKey: v.string() },
   handler: async (ctx, args) => {
-    const profile = await ctx.db
-      .query("healthProfiles")
-      .withIndex("by_userKey", (q) => q.eq("userKey", args.userKey))
-      .unique();
-    
-    if (!profile) return { exists: false, isComplete: false };
-    
-    return { 
-      exists: true, 
-      isComplete: profile.isComplete,
-      profile 
-    };
+    return await ctx.runQuery(components.air.healthProfile.isHealthProfileComplete, args);
   },
 });
 
@@ -53,67 +44,7 @@ export const saveHealthProfile = mutation({
     medications: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
-    
-    // Check if essential fields are filled
-    const isComplete = Boolean(
-      args.age && 
-      args.activityLevel && 
-      args.outdoorExposure
-    );
-    
-    const existing = await ctx.db
-      .query("healthProfiles")
-      .withIndex("by_userKey", (q) => q.eq("userKey", args.userKey))
-      .unique();
-    
-    if (existing) {
-      // Update existing profile
-      await ctx.db.patch(existing._id, {
-        name: args.name,
-        age: args.age,
-        gender: args.gender,
-        hasRespiratoryCondition: args.hasRespiratoryCondition,
-        conditions: args.conditions,
-        conditionSeverity: args.conditionSeverity,
-        activityLevel: args.activityLevel,
-        outdoorExposure: args.outdoorExposure,
-        smokingStatus: args.smokingStatus,
-        livesNearTraffic: args.livesNearTraffic,
-        hasAirPurifier: args.hasAirPurifier,
-        isPregnant: args.isPregnant,
-        hasHeartCondition: args.hasHeartCondition,
-        medications: args.medications,
-        updatedAt: now,
-        isComplete,
-      });
-      
-      return { success: true, profileId: existing._id, isNew: false };
-    }
-    
-    // Create new profile
-    const profileId = await ctx.db.insert("healthProfiles", {
-      userKey: args.userKey,
-      name: args.name,
-      age: args.age,
-      gender: args.gender,
-      hasRespiratoryCondition: args.hasRespiratoryCondition,
-      conditions: args.conditions,
-      conditionSeverity: args.conditionSeverity,
-      activityLevel: args.activityLevel,
-      outdoorExposure: args.outdoorExposure,
-      smokingStatus: args.smokingStatus,
-      livesNearTraffic: args.livesNearTraffic,
-      hasAirPurifier: args.hasAirPurifier,
-      isPregnant: args.isPregnant,
-      hasHeartCondition: args.hasHeartCondition,
-      medications: args.medications,
-      createdAt: now,
-      updatedAt: now,
-      isComplete,
-    });
-    
-    return { success: true, profileId, isNew: true };
+    return await ctx.runMutation(components.air.healthProfile.saveHealthProfile, args);
   },
 });
 
@@ -127,24 +58,7 @@ export const updateHealthConditions = mutation({
     medications: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("healthProfiles")
-      .withIndex("by_userKey", (q) => q.eq("userKey", args.userKey))
-      .unique();
-    
-    if (!existing) {
-      throw new Error("Health profile not found. Please create a profile first.");
-    }
-    
-    await ctx.db.patch(existing._id, {
-      hasRespiratoryCondition: args.hasRespiratoryCondition,
-      conditions: args.conditions,
-      conditionSeverity: args.conditionSeverity,
-      medications: args.medications,
-      updatedAt: Date.now(),
-    });
-    
-    return { success: true };
+    return await ctx.runMutation(components.air.healthProfile.updateHealthConditions, args);
   },
 });
 
@@ -152,16 +66,6 @@ export const updateHealthConditions = mutation({
 export const deleteHealthProfile = mutation({
   args: { userKey: v.string() },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("healthProfiles")
-      .withIndex("by_userKey", (q) => q.eq("userKey", args.userKey))
-      .unique();
-    
-    if (existing) {
-      await ctx.db.delete(existing._id);
-      return { success: true };
-    }
-    
-    return { success: false, message: "Profile not found" };
+    return await ctx.runMutation(components.air.healthProfile.deleteHealthProfile, args);
   },
 });
