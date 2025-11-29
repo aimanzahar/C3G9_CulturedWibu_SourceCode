@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   SparklesIcon,
@@ -16,6 +16,7 @@ import {
   UserGroupIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import Navbar from '@/components/navigation/Navbar';
 
@@ -38,60 +39,103 @@ interface PollutantPrediction {
   riskLevel: 'low' | 'moderate' | 'high';
 }
 
-const healthInsights: HealthInsight[] = [
-  {
-    id: '1',
-    type: 'warning',
-    title: 'Air Quality Alert for Tomorrow',
-    description: 'AI predicts PM2.5 levels will reach 85 μg/m³ between 7-9 AM in your area due to increased traffic and weather patterns.',
-    confidence: 87,
-    timestamp: '2 hours ago',
-    actionable: 'Consider shifting your morning commute to after 10 AM or use public transit.',
-  },
-  {
-    id: '2',
-    type: 'prediction',
-    title: 'Weekly Air Quality Forecast',
-    description: 'Based on weather patterns and historical data, air quality is expected to improve by Thursday with light rain predicted.',
-    confidence: 72,
-    timestamp: '4 hours ago',
-  },
-  {
-    id: '3',
-    type: 'tip',
-    title: 'Optimal Exercise Window',
-    description: 'AI analysis shows the best outdoor exercise time for your location is between 6-7 PM when pollution levels are typically 40% lower.',
-    timestamp: '1 day ago',
-    actionable: 'Schedule your outdoor activities during this window for maximum health benefits.',
-  },
-  {
-    id: '4',
-    type: 'achievement',
-    title: 'Health Score Improved',
-    description: 'Your weekly exposure average has decreased by 15% compared to last week. Keep making smart routing choices!',
-    timestamp: '2 days ago',
-  },
-];
+interface VulnerableGroupAdvisory {
+  group: string;
+  icon: string;
+  risk: 'low' | 'moderate' | 'high';
+  recommendation: string;
+}
 
-const pollutantPredictions: PollutantPrediction[] = [
-  { name: 'PM2.5', current: 28, predicted: 45, unit: 'μg/m³', trend: 'up', riskLevel: 'moderate' },
-  { name: 'NO₂', current: 19, predicted: 22, unit: 'ppb', trend: 'up', riskLevel: 'low' },
-  { name: 'O₃', current: 35, predicted: 30, unit: 'ppb', trend: 'down', riskLevel: 'low' },
-  { name: 'CO', current: 0.8, predicted: 1.2, unit: 'ppm', trend: 'up', riskLevel: 'low' },
-];
-
-const vulnerableGroups = [
-  { group: 'Children', icon: '👶', risk: 'moderate', recommendation: 'Limit outdoor play during peak hours' },
-  { group: 'Elderly', icon: '👴', risk: 'high', recommendation: 'Stay indoors with air filtration' },
-  { group: 'Asthma Patients', icon: '🫁', risk: 'high', recommendation: 'Carry inhaler, avoid outdoor exercise' },
-  { group: 'Outdoor Workers', icon: '👷', risk: 'moderate', recommendation: 'Use N95 masks during work' },
-];
+interface HealthPredictionResponse {
+  healthScore: number;
+  exposureReduction: number;
+  insights: HealthInsight[];
+  pollutantPredictions: PollutantPrediction[];
+  vulnerableGroups: VulnerableGroupAdvisory[];
+  modelAccuracy: number;
+  dataPointsToday: number;
+  lastUpdated: string;
+}
 
 export default function AIHealthPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [predictions, setPredictions] = useState<HealthPredictionResponse | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  const healthScore = 78;
-  const exposureReduction = 23;
+  const fetchPredictions = useCallback(async (lat: number, lng: number) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/ai-health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch predictions');
+      }
+
+      const data: HealthPredictionResponse = await response.json();
+      setPredictions(data);
+      setLastRefresh(new Date());
+    } catch (err) {
+      console.error('Error fetching predictions:', err);
+      setError('Unable to load AI predictions. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ lat: latitude, lng: longitude });
+          fetchPredictions(latitude, longitude);
+        },
+        (err) => {
+          console.error('Geolocation error:', err);
+          // Default to Kuala Lumpur
+          const defaultLat = 3.139;
+          const defaultLng = 101.6869;
+          setLocation({ lat: defaultLat, lng: defaultLng });
+          fetchPredictions(defaultLat, defaultLng);
+        }
+      );
+    } else {
+      // Default to Kuala Lumpur
+      const defaultLat = 3.139;
+      const defaultLng = 101.6869;
+      setLocation({ lat: defaultLat, lng: defaultLng });
+      fetchPredictions(defaultLat, defaultLng);
+    }
+  }, [fetchPredictions]);
+
+  const handleRefresh = () => {
+    if (location) {
+      fetchPredictions(location.lat, location.lng);
+    }
+  };
+
+  const healthScore = predictions?.healthScore ?? 0;
+  const exposureReduction = predictions?.exposureReduction ?? 0;
+  const healthInsights = predictions?.insights ?? [];
+  const pollutantPredictions = predictions?.pollutantPredictions ?? [];
+  const vulnerableGroups = predictions?.vulnerableGroups ?? [];
+
+  const getTimeSinceUpdate = () => {
+    if (!lastRefresh) return 'Never';
+    const diff = Math.floor((Date.now() - lastRefresh.getTime()) / 1000);
+    if (diff < 60) return `${diff} seconds ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    return `${Math.floor(diff / 3600)} hours ago`;
+  };
 
   return (
     <>
@@ -100,18 +144,55 @@ export default function AIHealthPage() {
         <div className="mx-auto max-w-6xl px-4 py-8 md:px-10">
           {/* Hero Section */}
           <section className="mb-8">
-            <div className="flex items-center gap-2 text-sm text-purple-600 mb-2">
-              <SparklesIcon className="h-4 w-4" />
-              <span className="font-medium">AI-Powered Health Intelligence</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-purple-600 mb-2">
+                  <SparklesIcon className="h-4 w-4" />
+                  <span className="font-medium">AI-Powered Health Intelligence</span>
+                </div>
+                <h1 className="font-display text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+                  Smart Air Health Predictions
+                </h1>
+                <p className="text-slate-600 max-w-2xl">
+                  Our AI analyzes air quality, traffic patterns, weather data, and health statistics to provide personalized recommendations for healthier living in Malaysian cities.
+                </p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
             </div>
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-slate-900 mb-2">
-              Smart Air Health Predictions
-            </h1>
-            <p className="text-slate-600 max-w-2xl">
-              Our AI analyzes air quality, traffic patterns, weather data, and health statistics to provide personalized recommendations for healthier living in Malaysian cities.
-            </p>
           </section>
 
+          {/* Error State */}
+          {error && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
+              <div className="flex items-center gap-2">
+                <ExclamationTriangleIcon className="h-5 w-5" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && !predictions && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-purple-200 rounded-full animate-pulse" />
+                <SparklesIcon className="h-8 w-8 text-purple-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <p className="mt-4 text-slate-600">AI is analyzing air quality data...</p>
+              <p className="text-sm text-slate-400">This may take a few seconds</p>
+            </div>
+          )}
+
+          {/* Main Content */}
+          {predictions && (
+            <>
           {/* Health Score Card */}
           <section className="grid md:grid-cols-3 gap-6 mb-8">
             {/* Main Health Score */}
@@ -159,6 +240,7 @@ export default function AIHealthPage() {
                       strokeWidth="12"
                       strokeLinecap="round"
                       strokeDasharray={`${(healthScore / 100) * 352} 352`}
+                      className="transition-all duration-1000"
                     />
                     <defs>
                       <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -169,7 +251,9 @@ export default function AIHealthPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-bold text-slate-900">{healthScore}</span>
-                    <span className="text-xs text-slate-500">Good</span>
+                    <span className="text-xs text-slate-500">
+                      {healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : healthScore >= 40 ? 'Moderate' : 'Poor'}
+                    </span>
                   </div>
                 </div>
 
@@ -180,7 +264,9 @@ export default function AIHealthPage() {
                       <ArrowTrendingDownIcon className="h-4 w-4" />
                       <span className="text-sm font-medium">Exposure</span>
                     </div>
-                    <p className="text-2xl font-bold text-emerald-700">-{exposureReduction}%</p>
+                    <p className="text-2xl font-bold text-emerald-700">
+                      {exposureReduction > 0 ? '-' : '+'}{Math.abs(exposureReduction)}%
+                    </p>
                     <p className="text-xs text-emerald-600">vs last week</p>
                   </div>
                   <div className="bg-sky-50 rounded-xl p-4">
@@ -196,16 +282,20 @@ export default function AIHealthPage() {
                       <ChartBarIcon className="h-4 w-4" />
                       <span className="text-sm font-medium">Avg AQI</span>
                     </div>
-                    <p className="text-2xl font-bold text-purple-700">62</p>
-                    <p className="text-xs text-purple-600">moderate</p>
+                    <p className="text-2xl font-bold text-purple-700">
+                      {pollutantPredictions.length > 0 ? Math.round(pollutantPredictions[0].current) : '--'}
+                    </p>
+                    <p className="text-xs text-purple-600">current</p>
                   </div>
                   <div className="bg-amber-50 rounded-xl p-4">
                     <div className="flex items-center gap-2 text-amber-600 mb-1">
                       <BellAlertIcon className="h-4 w-4" />
                       <span className="text-sm font-medium">Alerts</span>
                     </div>
-                    <p className="text-2xl font-bold text-amber-700">2</p>
-                    <p className="text-xs text-amber-600">this week</p>
+                    <p className="text-2xl font-bold text-amber-700">
+                      {healthInsights.filter(i => i.type === 'warning').length}
+                    </p>
+                    <p className="text-xs text-amber-600">active</p>
                   </div>
                 </div>
               </div>
@@ -221,24 +311,33 @@ export default function AIHealthPage() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-600">Prediction Accuracy</span>
-                    <span className="font-medium text-purple-700">87%</span>
+                    <span className="font-medium text-purple-700">{predictions?.modelAccuracy ?? 0}%</span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className="h-full w-[87%] bg-gradient-to-r from-purple-500 to-sky-500 rounded-full" />
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-sky-500 rounded-full transition-all duration-1000" 
+                      style={{ width: `${predictions?.modelAccuracy ?? 0}%` }}
+                    />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-600">Data Points Today</span>
-                    <span className="font-medium text-purple-700">1,247</span>
+                    <span className="font-medium text-purple-700">{(predictions?.dataPointsToday ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className="h-full w-[65%] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-1000" 
+                      style={{ width: `${Math.min(((predictions?.dataPointsToday ?? 0) / 2000) * 100, 100)}%` }}
+                    />
                   </div>
                 </div>
                 <div className="pt-2 border-t border-purple-100">
                   <p className="text-xs text-slate-500">
-                    Model trained on 2.3M+ air quality readings from DOE Malaysia, OpenAQ, and community sensors.
+                    Model trained on 2.3M+ air quality readings from DOE Malaysia, WAQI, and OpenAQ.
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Last updated: {getTimeSinceUpdate()}
                   </p>
                 </div>
               </div>
@@ -249,8 +348,9 @@ export default function AIHealthPage() {
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-slate-900">24-Hour Pollutant Forecast</h2>
-              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                Updated 30 min ago
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full flex items-center gap-1">
+                <SparklesIcon className="h-3 w-3" />
+                AI Generated
               </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -278,7 +378,7 @@ export default function AIHealthPage() {
                     ) : (
                       <span className="w-4 h-0.5 bg-slate-400" />
                     )}
-                    <span className={pollutant.trend === 'up' ? 'text-rose-600' : 'text-emerald-600'}>
+                    <span className={pollutant.trend === 'up' ? 'text-rose-600' : pollutant.trend === 'down' ? 'text-emerald-600' : 'text-slate-600'}>
                       → {pollutant.predicted} {pollutant.unit}
                     </span>
                   </div>
@@ -416,6 +516,8 @@ export default function AIHealthPage() {
               <ArrowRightIcon className="h-4 w-4" />
             </Link>
           </section>
+            </>
+          )}
         </div>
       </main>
     </>
