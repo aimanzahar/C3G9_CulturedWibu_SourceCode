@@ -8,6 +8,8 @@ services:
       args:
         NEXT_PUBLIC_CONVEX_URL: "https://convex.zahar.my"
     container_name: air-app
+    volumes:
+      - /volume1/docker/air:/app/data
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
