@@ -132,6 +132,26 @@ export default function AirQualityMap({
   const [currentRadius, setCurrentRadius] = useState(radiusKm);
   const [isAnimating, setIsAnimating] = useState(false);
   const mapRef = useRef<LeafletMap | null>(null);
+  
+  // Data source filter state
+  const [enabledSources, setEnabledSources] = useState<Record<string, boolean>>({
+    doe: true,
+    waqi: true,
+    openaq: true,
+  });
+
+  // Filter air quality data based on enabled sources
+  const filteredAirQualityData = airQualityData?.filter(
+    (item) => item.source && enabledSources[item.source.toLowerCase()]
+  ) || [];
+
+  // Toggle a specific data source
+  const toggleSource = (source: string) => {
+    setEnabledSources((prev) => ({
+      ...prev,
+      [source]: !prev[source],
+    }));
+  };
 
   // Update center when user location changes and tracking is active
   useEffect(() => {
@@ -290,6 +310,45 @@ export default function AirQualityMap({
             </select>
           </div>
         )}
+
+        {/* Data Sources Filter */}
+        {showHeatmap && showDataSourceIndicators && (
+          <div className="border-t pt-2">
+            <div className="text-xs font-medium text-gray-700 mb-1">Data Sources</div>
+            <div className="space-y-1">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs hover:bg-gray-50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={enabledSources.doe}
+                  onChange={() => toggleSource('doe')}
+                  className="w-3 h-3 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="w-3 h-3 bg-red-600 rounded-full flex-shrink-0"></span>
+                <span className={enabledSources.doe ? 'text-gray-700' : 'text-gray-400 line-through'}>DOE</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs hover:bg-gray-50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={enabledSources.waqi}
+                  onChange={() => toggleSource('waqi')}
+                  className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="w-3 h-3 bg-blue-600 rounded-full flex-shrink-0"></span>
+                <span className={enabledSources.waqi ? 'text-gray-700' : 'text-gray-400 line-through'}>WAQI</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs hover:bg-gray-50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={enabledSources.openaq}
+                  onChange={() => toggleSource('openaq')}
+                  className="w-3 h-3 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span className="w-3 h-3 bg-orange-500 rounded-full flex-shrink-0"></span>
+                <span className={enabledSources.openaq ? 'text-gray-500' : 'text-gray-400 line-through'}>OpenAQ</span>
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Custom Zoom Control with Radius Display */}
@@ -310,27 +369,6 @@ export default function AirQualityMap({
           </div>
           <div className="text-xs text-gray-500">
             {nearbyStations?.length || 0} stations
-          </div>
-        </div>
-      )}
-
-      {/* Data Source Legend */}
-      {showHeatmap && showDataSourceIndicators && airQualityData && airQualityData.length > 0 && (
-        <div className="absolute bottom-20 right-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg shadow-lg px-3 py-2">
-          <div className="text-xs font-semibold text-gray-900 mb-2">Data Sources</div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center text-white text-xs">🏢</div>
-              <span className="text-xs text-gray-700">DOE (Malaysia)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">🌐</div>
-              <span className="text-xs text-gray-700">WAQI (Global)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs">❌</div>
-              <span className="text-xs text-gray-500">OpenAQ (Offline)</span>
-            </div>
           </div>
         </div>
       )}
@@ -450,18 +488,18 @@ export default function AirQualityMap({
         ))}
 
         {/* Heatmap Layer */}
-        {showHeatmap && airQualityData && airQualityData.length > 0 && (
-          <HeatmapLayer data={airQualityData} selectedPollutant={selectedPollutant} />
+        {showHeatmap && filteredAirQualityData.length > 0 && (
+          <HeatmapLayer data={filteredAirQualityData} selectedPollutant={selectedPollutant} />
         )}
 
         {/* Clickable Heatmap Areas */}
-        {showHeatmap && airQualityData && airQualityData.length > 0 && (
-          <HeatmapClickLayer data={airQualityData} selectedPollutant={selectedPollutant} />
+        {showHeatmap && filteredAirQualityData.length > 0 && (
+          <HeatmapClickLayer data={filteredAirQualityData} selectedPollutant={selectedPollutant} />
         )}
 
         {/* Data Source Indicators */}
-        {showHeatmap && showDataSourceIndicators && airQualityData && airQualityData.length > 0 && (
-          <DataSourceIndicator data={airQualityData} selectedPollutant={selectedPollutant} />
+        {showHeatmap && showDataSourceIndicators && filteredAirQualityData.length > 0 && (
+          <DataSourceIndicator data={filteredAirQualityData} selectedPollutant={selectedPollutant} />
         )}
       </MapContainer>
     </div>

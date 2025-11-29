@@ -1231,13 +1231,12 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* Chat Widget */}
+      </main>
+      
+      {/* Chat Widget - Outside main for proper fixed positioning */}
       <ChatErrorBoundary>
         <ChatWidget />
       </ChatErrorBoundary>
-      
-      
-      </main>
     </ChatProvider>
   );
 }

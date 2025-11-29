@@ -25,14 +25,17 @@
 
 /* Chat Widget Container */
 .chat-widget {
-  position: fixed;
+  position: fixed !important;
   bottom: 24px;
   right: 24px;
-  z-index: 1000;
+  z-index: 9999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--chat-text-primary);
+  /* Ensure it's not affected by parent transforms */
+  transform: none;
+  will-change: auto;
 }
 
 /* Floating Action Button */
