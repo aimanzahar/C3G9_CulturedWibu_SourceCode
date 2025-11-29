@@ -36,6 +36,7 @@ const ChatWidget: React.FC = () => {
     closeChat,
     sendMessage,
     updateHealthProfile,
+    clearChat,
   } = useChat();
 
   // Prevent hydration issues
@@ -173,6 +174,15 @@ const ChatWidget: React.FC = () => {
     closeChat();
   };
 
+  const handleResetChat = () => {
+    // Show confirmation dialog
+    const shouldReset = window.confirm('Are you sure you want to reset the chat? This will clear all messages.');
+    if (shouldReset) {
+      clearChat();
+      setHasAskedAboutHealth(false);
+    }
+  };
+
   const formatMessage = (message: string) => {
     // Simple formatting for line breaks - safe approach without dangerouslySetInnerHTML
     return message
@@ -294,11 +304,19 @@ const ChatWidget: React.FC = () => {
               </div>
             )}
           </div>
-          <button className="close-button" onClick={handleClose} aria-label="Close chat">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+          <div className="header-actions">
+            <button className="reset-button" onClick={handleResetChat} aria-label="Reset chat" title="Reset Chat">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3 3v5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button className="close-button" onClick={handleClose} aria-label="Close chat">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="chat-messages">
