@@ -124,7 +124,7 @@ class AirQualityService {
     };
   }
 
-  // Fetch from combined API with DOE priority
+  // Fetch from combined API with DOE priority (OpenAQ disabled)
   private async fetchCombined(mode: 'radius' | 'bounds' | 'all', params: any): Promise<AirQualityStation[]> {
     const cacheKey = this.getCacheKey('combined', { mode, ...params });
     const cached = this.getCachedData<AirQualityStation[]>(cacheKey);

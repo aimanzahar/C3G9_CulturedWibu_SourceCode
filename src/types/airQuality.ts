@@ -26,6 +26,7 @@ export interface AirQualityStation {
   co?: number;
   o3?: number;
   so2?: number;
+  pm10?: number;
   lastUpdated?: string;
   distance?: number; // Distance from reference point in km
   source?: "waqi" | "openaq" | "doe";

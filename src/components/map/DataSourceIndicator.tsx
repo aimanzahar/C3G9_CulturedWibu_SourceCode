@@ -23,6 +23,14 @@ interface DataSourceIndicatorProps {
   selectedPollutant?: 'aqi' | 'pm25' | 'no2' | 'co' | 'o3' | 'so2';
 }
 
+// Helper function to properly encode UTF-8 strings to base64
+const utf8ToBase64 = (str: string): string => {
+  // Convert UTF-8 string to bytes
+  const utf8Bytes = new TextEncoder().encode(str);
+  // Convert bytes to base64
+  return btoa(String.fromCharCode(...utf8Bytes));
+};
+
 const getSourceIcon = (source?: string) => {
   const sourceConfig = {
     doe: {
@@ -53,7 +61,7 @@ const getSourceIcon = (source?: string) => {
   };
 
   return new Icon({
-    iconUrl: `data:image/svg+xml;base64,${btoa(`
+    iconUrl: `data:image/svg+xml;base64,${utf8ToBase64(`
       <svg width="${config.size}" height="${config.size}" xmlns="http://www.w3.org/2000/svg">
         <circle cx="${config.size/2}" cy="${config.size/2}" r="${config.size/2 - 2}"
                 fill="${config.color}" stroke="white" stroke-width="2" opacity="0.9"/>

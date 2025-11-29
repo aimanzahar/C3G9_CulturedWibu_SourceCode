@@ -90,10 +90,13 @@ async function searchByBounds(bounds: BoundingBox, limit: number = 100): Promise
       country: station.country?.name,
       lat: parseFloat(station.lat),
       lng: parseFloat(station.lon),
-      aqi: aqi,
+      aqi: typeof aqi === 'string' && aqi !== '-' ? parseInt(aqi, 10) : aqi,
       pm25: iaqi.pm25?.v,
       no2: iaqi.no2?.v,
       co: iaqi.co?.v,
+      o3: iaqi.o3?.v,
+      so2: iaqi.so2?.v,
+      pm10: iaqi.pm10?.v,
       lastUpdated: station.time?.iso,
       source: "waqi"
     });
@@ -134,6 +137,7 @@ async function getSingleStation(lat: number, lon: number): Promise<AirQualitySta
   const iaqi = data.data?.iaqi ?? {};
   const cityName = data.data?.city?.name ?? "WAQI station";
   
+  const aqi = data.data?.aqi;
   return {
     id: `waqi-${lat}-${lon}`,
     name: cityName,
@@ -142,10 +146,13 @@ async function getSingleStation(lat: number, lon: number): Promise<AirQualitySta
     country: data.data?.city?.country,
     lat,
     lng: lon,
-    aqi: data.data?.aqi,
+    aqi: typeof aqi === 'string' && aqi !== '-' ? parseInt(aqi, 10) : aqi,
     pm25: iaqi.pm25?.v,
     no2: iaqi.no2?.v,
     co: iaqi.co?.v,
+    o3: iaqi.o3?.v,
+    so2: iaqi.so2?.v,
+    pm10: iaqi.pm10?.v,
     lastUpdated: data.data?.time?.iso,
     source: "waqi"
   };

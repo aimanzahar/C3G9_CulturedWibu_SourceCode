@@ -35,6 +35,12 @@ const DataSourceIndicator = dynamic(
   { ssr: false }
 );
 
+// Dynamic import to avoid SSR issues
+const HeatmapClickLayer = dynamic(
+  () => import("./HeatmapClickLayer"),
+  { ssr: false }
+);
+
 interface AirQualityData {
   lat?: number;
   lng?: number;
@@ -246,6 +252,9 @@ export default function AirQualityMap({
             />
             Heatmap
           </label>
+          {showHeatmap && (
+            <div className="text-xs text-gray-500 mt-1">Click circles for details</div>
+          )}
         </div>
 
         {/* Data Source Toggle */}
@@ -319,8 +328,8 @@ export default function AirQualityMap({
               <span className="text-xs text-gray-700">WAQI (Global)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs">📊</div>
-              <span className="text-xs text-gray-700">OpenAQ (Open)</span>
+              <div className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs">❌</div>
+              <span className="text-xs text-gray-500">OpenAQ (Offline)</span>
             </div>
           </div>
         </div>
@@ -443,6 +452,11 @@ export default function AirQualityMap({
         {/* Heatmap Layer */}
         {showHeatmap && airQualityData && airQualityData.length > 0 && (
           <HeatmapLayer data={airQualityData} selectedPollutant={selectedPollutant} />
+        )}
+
+        {/* Clickable Heatmap Areas */}
+        {showHeatmap && airQualityData && airQualityData.length > 0 && (
+          <HeatmapClickLayer data={airQualityData} selectedPollutant={selectedPollutant} />
         )}
 
         {/* Data Source Indicators */}

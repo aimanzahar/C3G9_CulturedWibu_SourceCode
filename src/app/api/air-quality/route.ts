@@ -7,7 +7,7 @@ import type {
   SearchResponse
 } from "../../../types/airQuality";
 
-// Priority order: DOE > WAQI
+// Priority order: DOE > WAQI (OpenAQ disabled - v2 deprecated, v3 requires API key)
 async function fetchFromDOE(lat: number, lng: number, radius?: number, bounds?: BoundingBox, limit?: number): Promise<AirQualityStation[]> {
   try {
     const url = bounds
@@ -45,7 +45,7 @@ async function fetchFromWAQI(lat: number, lng: number, radius?: number, bounds?:
 
     const body = bounds
       ? { mode: "bounds", bounds, limit }
-      : { lat, lng, radius: radius || 100, limit };
+      : { lat, lon: lng, radius: radius || 100, limit };
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${url}`, {
       method: "POST",
@@ -56,8 +56,10 @@ async function fetchFromWAQI(lat: number, lng: number, radius?: number, bounds?:
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data && data.data.length > 0) {
-        // Mark all stations as WAQI source
-        return data.data.map((station: any) => ({ ...station, source: "waqi" }));
+        // Mark all stations as WAQI source and filter out invalid AQI
+        return data.data
+          .filter((station: any) => station.aqi !== null && station.aqi !== undefined && station.aqi !== "-")
+          .map((station: any) => ({ ...station, source: "waqi" }));
       }
     }
   } catch (error) {
@@ -95,7 +97,7 @@ export async function POST(req: Request) {
     }
 
     let stations: AirQualityStation[] = [];
-    const stationLimit = limit || 100;
+    const stationLimit = limit || 200; // Increased limit to accommodate both DOE and WAQI
 
     // Handle different modes
     if (mode === "radius" || radius) {
@@ -105,37 +107,15 @@ export async function POST(req: Request) {
       const doeStations = await fetchFromDOE(lat, lng, radiusKm, undefined, stationLimit);
       stations.push(...doeStations);
 
-      // If we have enough DOE stations, return them
-      if (stations.length >= stationLimit * 0.5) {
-        return NextResponse.json({
-          success: true,
-          data: stations.slice(0, stationLimit),
-          summary: {
-            centerLat: lat,
-            centerLng: lng,
-            radiusKm,
-            totalStations: stations.length,
-            averageAQI: stations.reduce((acc, s) => acc + (s.aqi || 0), 0) / stations.length || 0,
-            highestAQI: Math.max(...stations.map(s => s.aqi || 0)),
-            lowestAQI: Math.min(...stations.map(s => s.aqi || Infinity)),
-            source: "doe"
-          }
-        });
-      }
-
-      // Otherwise, fetch from WAQI to supplement
+      // Always fetch from WAQI to supplement DOE data
       const waqiStations = await fetchFromWAQI(lat, lng, radiusKm, undefined, stationLimit);
 
-      // Combine and deduplicate (prioritize DOE)
-      const combinedStations = [...stations];
+      // Combine both DOE and WAQI stations (no deduplication to show all sources)
+      const combinedStations = [...doeStations];
 
+      // Add WAQI stations if we still have room
       for (const waqiStation of waqiStations) {
-        const exists = combinedStations.some(s =>
-          Math.abs(s.lat - waqiStation.lat) < 0.001 &&
-          Math.abs(s.lng - waqiStation.lng) < 0.001
-        );
-
-        if (!exists && combinedStations.length < stationLimit) {
+        if (combinedStations.length < stationLimit) {
           combinedStations.push(waqiStation);
         }
       }
@@ -168,20 +148,13 @@ export async function POST(req: Request) {
       const doeStations = await fetchFromDOE(0, 0, undefined, searchBounds, stationLimit);
       stations.push(...doeStations);
 
-      // If we need more stations, fetch from WAQI
-      if (stations.length < stationLimit) {
-        const waqiStations = await fetchFromWAQI(0, 0, undefined, searchBounds, stationLimit);
+      // Always fetch from WAQI to supplement
+      const waqiStations = await fetchFromWAQI(0, 0, undefined, searchBounds, stationLimit);
 
-        // Combine and deduplicate (prioritize DOE)
-        for (const waqiStation of waqiStations) {
-          const exists = stations.some(s =>
-            Math.abs(s.lat - waqiStation.lat) < 0.001 &&
-            Math.abs(s.lng - waqiStation.lng) < 0.001
-          );
-
-          if (!exists && stations.length < stationLimit) {
-            stations.push(waqiStation);
-          }
+      // Combine both DOE and WAQI stations
+      for (const waqiStation of waqiStations) {
+        if (stations.length < stationLimit) {
+          stations.push(waqiStation);
         }
       }
 
