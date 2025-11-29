@@ -23,12 +23,6 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
-    networks:
-      app_net:
-        ipv4_address: 172.29.0.2
-    depends_on:
-      convex:
-        condition: service_started
     # Add health check to ensure the service is running
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
@@ -36,44 +30,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  convex:
-    image: node:20-alpine
-    container_name: air-convex
-    working_dir: /app
-    volumes:
-      - .:/app
-      - convex_node_modules:/app/node_modules
-    environment:
-      NODE_ENV: development
-      CONVEX_SELF_HOSTED_URL: "https://convex.zahar.my"
-      CONVEX_PRODUCTION_URL: "https://convex.zahar.my"
-      CONVEX_DEPLOY_KEY: ${CONVEX_DEPLOY_KEY}
-      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_DEPLOY_KEY}
-    command: >
-      sh -c "
-        npm install --silent &&
-        npx convex deploy --yes &&
-        echo 'Convex deploy completed' > /tmp/convex_ready &&
-        tail -f /dev/null
-      "
-    restart: unless-stopped
-    networks:
-      app_net:
-        ipv4_address: 172.29.0.3
-    healthcheck:
-      test: ["CMD", "sh", "-c", "test -f /tmp/convex_ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 120s
-
-networks:
-  app_net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.29.0.0/24
-
-volumes:
-  convex_node_modules:
