@@ -182,11 +182,27 @@ export default function AIHealthPage() {
           {loading && !predictions && (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="relative">
-                <div className="w-16 h-16 border-4 border-purple-200 rounded-full animate-pulse" />
-                <SparklesIcon className="h-8 w-8 text-purple-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                {/* Outer rotating ring */}
+                <div className="w-24 h-24 rounded-full border-4 border-purple-100 border-t-purple-500 animate-spin" />
+                {/* Middle pulsing ring */}
+                <div className="absolute inset-2 rounded-full border-4 border-sky-100 border-b-sky-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+                {/* Inner icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-sky-500 rounded-full flex items-center justify-center animate-pulse">
+                    <SparklesIcon className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </div>
-              <p className="mt-4 text-slate-600">AI is analyzing air quality data...</p>
-              <p className="text-sm text-slate-400">This may take a few seconds</p>
+              <div className="mt-6 text-center">
+                <p className="text-lg font-medium text-slate-700">AI is analyzing air quality data...</p>
+                <p className="text-sm text-slate-500 mt-1">Generating personalized health insights</p>
+                <div className="flex items-center justify-center gap-1 mt-4">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-2 h-2 bg-sky-500 rounded-full animate-bounce" style={{ animationDelay: '450ms' }} />
+                </div>
+              </div>
             </div>
           )}
 
