@@ -84,6 +84,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
+          
+          // Skip thinking/placeholder messages
+          if (parsed.id?.includes('thinking') || parsed.content === '...') {
+            localStorage.removeItem(key);
+            return;
+          }
+          
           // Convert timestamp string back to Date object
           if (parsed.timestamp) {
             parsed.timestamp = new Date(parsed.timestamp);
@@ -135,7 +142,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       .forEach(key => localStorage.removeItem(key));
     
     // Save current messages (limit to MAX_MESSAGES)
-    const messagesToSave = messages.slice(-MAX_MESSAGES);
+    // Filter out thinking/placeholder messages that have "..." content or thinking IDs
+    const messagesToSave = messages
+      .filter(message => 
+        !message.id.includes('thinking') && 
+        message.content !== '...'
+      )
+      .slice(-MAX_MESSAGES);
     messagesToSave.forEach(message => {
       const key = getMessageKey(message.id);
       localStorage.setItem(key, JSON.stringify({

@@ -28,7 +28,14 @@ const ChatWidget: React.FC = () => {
     name: 'Kuala Lumpur',
     loading: false,
   });
-  const [hasAskedAboutHealth, setHasAskedAboutHealth] = useState(false);
+  const [hasAskedAboutHealth, setHasAskedAboutHealth] = useState(() => {
+    // Check localStorage on init to see if user already answered
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('air-quality-chat-health-asked');
+      return stored === 'true';
+    }
+    return false;
+  });
   const [widgetDimensions, setWidgetDimensions] = useState<WidgetDimensions>({
     width: 360,
     height: 520,
@@ -55,6 +62,7 @@ const ChatWidget: React.FC = () => {
     sendMessage,
     updateHealthProfile,
     clearChat,
+    healthProfile,
   } = useChat();
 
   // Load saved dimensions from localStorage on mount
@@ -94,13 +102,12 @@ const ChatWidget: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Check if we need to ask about respiratory conditions
-    const hasHealthMessage = messages.some(msg => 
-      msg.content.toLowerCase().includes('respiratory') || 
-      msg.content.toLowerCase().includes('breathing')
-    );
-    setHasAskedAboutHealth(hasHealthMessage);
-  }, [messages]);
+    // Check if health profile already exists (user answered before)
+    if (healthProfile !== null) {
+      setHasAskedAboutHealth(true);
+      localStorage.setItem('air-quality-chat-health-asked', 'true');
+    }
+  }, [healthProfile]);
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
@@ -349,7 +356,8 @@ const ChatWidget: React.FC = () => {
   }, [isResizing, handleResize, handleResizeEnd]);
 
   const renderHealthPrompt = () => {
-    if (hasAskedAboutHealth || messages.length > 2) return null;
+    // Don't show if already answered or health profile exists
+    if (hasAskedAboutHealth || healthProfile !== null || messages.length > 5) return null;
     
     return (
       <div className="health-prompt">
@@ -363,6 +371,7 @@ const ChatWidget: React.FC = () => {
                 sensitivityLevel: 'sensitive',
               });
               setHasAskedAboutHealth(true);
+              localStorage.setItem('air-quality-chat-health-asked', 'true');
             }}
             className="health-button"
           >
@@ -376,6 +385,7 @@ const ChatWidget: React.FC = () => {
                 sensitivityLevel: 'normal',
               });
               setHasAskedAboutHealth(true);
+              localStorage.setItem('air-quality-chat-health-asked', 'true');
             }}
             className="health-button"
           >
@@ -498,7 +508,9 @@ const ChatWidget: React.FC = () => {
             </div>
           )}
           
-          {messages.map((message) => (
+          {messages
+            .filter(message => message.content !== '...' && !message.id.includes('thinking'))
+            .map((message) => (
             <div key={message.id} className={`message ${message.role}`}>
               {message.role === 'assistant' && (
                 <div className="message-avatar">
