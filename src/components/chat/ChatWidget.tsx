@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage, HealthProfile, AirQualityContext } from '@/types/chat';
 import { useChat } from '@/contexts/ChatContext';
 import './ChatWidget.css';
@@ -231,8 +232,45 @@ const ChatWidget: React.FC = () => {
     }
   };
 
-  const formatMessage = (message: string) => {
-    // Simple formatting for line breaks - safe approach without dangerouslySetInnerHTML
+  const formatMessage = (message: string, isAssistant: boolean = false) => {
+    // Use ReactMarkdown for assistant messages to render markdown
+    if (isAssistant) {
+      return (
+        <ReactMarkdown
+          components={{
+            // Customize paragraph rendering to avoid extra margins
+            p: ({ children }) => <p className="markdown-paragraph">{children}</p>,
+            // Customize strong/bold text
+            strong: ({ children }) => <strong className="markdown-strong">{children}</strong>,
+            // Customize emphasis/italic text
+            em: ({ children }) => <em className="markdown-em">{children}</em>,
+            // Customize lists
+            ul: ({ children }) => <ul className="markdown-ul">{children}</ul>,
+            ol: ({ children }) => <ol className="markdown-ol">{children}</ol>,
+            li: ({ children }) => <li className="markdown-li">{children}</li>,
+            // Customize headers if used
+            h1: ({ children }) => <h1 className="markdown-h1">{children}</h1>,
+            h2: ({ children }) => <h2 className="markdown-h2">{children}</h2>,
+            h3: ({ children }) => <h3 className="markdown-h3">{children}</h3>,
+            h4: ({ children }) => <h4 className="markdown-h4">{children}</h4>,
+            h5: ({ children }) => <h5 className="markdown-h5">{children}</h5>,
+            h6: ({ children }) => <h6 className="markdown-h6">{children}</h6>,
+            // Customize code blocks
+            code: ({ children, className }) => {
+              const match = /language-(\w+)/.exec(className || '');
+              const isInline = !className;
+              return isInline ?
+                <code className="markdown-code-inline">{children}</code> :
+                <code className="markdown-code-block">{children}</code>;
+            },
+          }}
+        >
+          {message}
+        </ReactMarkdown>
+      );
+    }
+    
+    // For user messages, keep the simple formatting
     return message
       .split('\n')
       .map((line, i) => {
@@ -446,7 +484,7 @@ const ChatWidget: React.FC = () => {
                     <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <h3>Hello! I'm your Air Quality Assistant</h3>
+                <h3>Hello! I&apos;m your Air Quality Assistant</h3>
                 <p>I can help you:</p>
                 <ul>
                   <li>Check current air quality at your location</li>
@@ -471,7 +509,7 @@ const ChatWidget: React.FC = () => {
               )}
               <div className="message-bubble">
                 <div className="message-content">
-                  {formatMessage(message.content)}
+                  {formatMessage(message.content, message.role === 'assistant')}
                 </div>
                 {message.metadata?.airQualityData && renderAirQualityBadge(message.metadata.airQualityData)}
                 <div className="message-timestamp">

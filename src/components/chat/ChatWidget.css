@@ -821,3 +821,90 @@
     color: var(--chat-text-primary);
   }
 }
+
+/* Markdown Styles */
+.message-content .markdown-paragraph {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.message-content .markdown-paragraph + .markdown-paragraph {
+  margin-top: 8px;
+}
+
+.message-content .markdown-strong {
+  font-weight: 700;
+  color: var(--chat-text-primary);
+}
+
+.message-content .markdown-em {
+  font-style: italic;
+  color: var(--chat-text-primary);
+}
+
+.message-content .markdown-ul {
+  margin: 8px 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.message-content .markdown-ol {
+  margin: 8px 0;
+  padding-left: 20px;
+  list-style-type: decimal;
+}
+
+.message-content .markdown-li {
+  margin: 4px 0;
+  color: var(--chat-text-primary);
+}
+
+.message-content .markdown-h1,
+.message-content .markdown-h2,
+.message-content .markdown-h3,
+.message-content .markdown-h4,
+.message-content .markdown-h5,
+.message-content .markdown-h6 {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+  color: var(--chat-text-primary);
+}
+
+.message-content .markdown-h1 {
+  font-size: 1.5em;
+}
+
+.message-content .markdown-h2 {
+  font-size: 1.3em;
+}
+
+.message-content .markdown-h3 {
+  font-size: 1.1em;
+}
+
+.message-content .markdown-h4,
+.message-content .markdown-h5,
+.message-content .markdown-h6 {
+  font-size: 1em;
+}
+
+.message-content .markdown-code-inline {
+  background: var(--chat-bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--chat-text-primary);
+}
+
+.message-content .markdown-code-block {
+  background: var(--chat-bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--chat-radius-md);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--chat-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 8px 0;
+}
