@@ -29,6 +29,12 @@ const ZoomControl = dynamic(
   { ssr: false }
 );
 
+// Dynamic import to avoid SSR issues
+const DataSourceIndicator = dynamic(
+  () => import("./DataSourceIndicator"),
+  { ssr: false }
+);
+
 interface AirQualityData {
   lat?: number;
   lng?: number;
@@ -116,6 +122,7 @@ export default function AirQualityMap({
   const [mapLayer, setMapLayer] = useState("street");
   const [zoom, setZoom] = useState(13);
   const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showDataSourceIndicators, setShowDataSourceIndicators] = useState(true);
   const [currentRadius, setCurrentRadius] = useState(radiusKm);
   const [isAnimating, setIsAnimating] = useState(false);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -241,6 +248,21 @@ export default function AirQualityMap({
           </label>
         </div>
 
+        {/* Data Source Toggle */}
+        {showHeatmap && (
+          <div className="border-t pt-2">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={showDataSourceIndicators}
+                onChange={(e) => setShowDataSourceIndicators(e.target.checked)}
+                className="rounded"
+              />
+              Show Sources
+            </label>
+          </div>
+        )}
+
         {/* Pollutant Selector */}
         {showHeatmap && (
           <div className="border-t pt-2">
@@ -279,6 +301,27 @@ export default function AirQualityMap({
           </div>
           <div className="text-xs text-gray-500">
             {nearbyStations?.length || 0} stations
+          </div>
+        </div>
+      )}
+
+      {/* Data Source Legend */}
+      {showHeatmap && showDataSourceIndicators && airQualityData && airQualityData.length > 0 && (
+        <div className="absolute bottom-20 right-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-lg shadow-lg px-3 py-2">
+          <div className="text-xs font-semibold text-gray-900 mb-2">Data Sources</div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center text-white text-xs">🏢</div>
+              <span className="text-xs text-gray-700">DOE (Malaysia)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">🌐</div>
+              <span className="text-xs text-gray-700">WAQI (Global)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs">📊</div>
+              <span className="text-xs text-gray-700">OpenAQ (Open)</span>
+            </div>
           </div>
         </div>
       )}
@@ -400,6 +443,11 @@ export default function AirQualityMap({
         {/* Heatmap Layer */}
         {showHeatmap && airQualityData && airQualityData.length > 0 && (
           <HeatmapLayer data={airQualityData} selectedPollutant={selectedPollutant} />
+        )}
+
+        {/* Data Source Indicators */}
+        {showHeatmap && showDataSourceIndicators && airQualityData && airQualityData.length > 0 && (
+          <DataSourceIndicator data={airQualityData} selectedPollutant={selectedPollutant} />
         )}
       </MapContainer>
     </div>
