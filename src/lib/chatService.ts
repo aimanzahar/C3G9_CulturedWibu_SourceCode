@@ -65,7 +65,7 @@ class ChatService {
     this.config = {
       baseUrl: process.env.OPENAI_BASE_URL || process.env.GEMINI_BASE_URL || process.env.NEXT_PUBLIC_GEMINI_BASE_URL || 'https://apipro.maynor1024.live',
       apiKey: process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
-      model: process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3-pro-preview-thinking'
+      model: process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3-pro-preview-11-2025'
     };
 
     // Initialize OpenAI client with custom base URL
