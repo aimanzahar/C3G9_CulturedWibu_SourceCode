@@ -78,7 +78,7 @@ The application is configured to automatically deploy Convex functions:
 
 1. **During Build**: Functions are deployed if `CONVEX_DEPLOY_KEY` is present
 2. **At Runtime**: Functions are deployed again when the container starts via `scripts/start.sh`
-3. **Safety Check**: If no deploy key is provided, the app still starts but with a warning in the container logs
+3. **Required**: If no deploy key is provided, the container will exit and log the missing key so you don’t serve a broken app
 
 ## Verification
 
