@@ -1,5 +1,7 @@
 # NafasLokal - Air Exposure Passport
 
+### 🌬️ *"Breathe Smarter. Live Healthier. One Commute at a Time."*
+
 > **Hackathon Solution: Good Health & Well-Being through AI-Driven Air Quality Intelligence**
 
 Urban residents in fast-developing Malaysian cities face growing health risks from worsening air quality and traffic congestion. Prolonged exposure to pollutants like PM2.5, NO₂, and CO contributes to respiratory illnesses, while congestion increases stress and accident risks. Despite available open datasets, city health planning often lacks real-time insights, leaving vulnerable communities exposed.
