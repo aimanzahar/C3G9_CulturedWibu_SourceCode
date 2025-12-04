@@ -273,11 +273,11 @@ export default function AirQualityComparison({
     }
   }, [currentAqi, currentLocation, currentLat, currentLng, currentSource, currentPm25, currentNo2, userKey, storeReading]);
 
-  // Process hourly data
-  const hourlyData: HourlyDataPoint[] = useMemo(() => {
+  // Process hourly data - base data in chronological order (oldest to newest for charts)
+  const hourlyDataChronological: HourlyDataPoint[] = useMemo(() => {
     if (!hourlyAverages) return [];
     
-    let data = hourlyAverages.map((hour: HourlyAverage) => ({
+    return hourlyAverages.map((hour: HourlyAverage) => ({
       hour: hour.hour,
       displayLabel: hour.displayHour,
       fullLabel: `${hour.displayDate} ${hour.displayHour}`,
@@ -290,26 +290,33 @@ export default function AirQualityComparison({
       minAqi: hour.minAqi,
       maxAqi: hour.maxAqi,
       readings: hour.readings,
-    }));
+    })).sort((a, b) => a.hour.localeCompare(b.hour)); // Always chronological for charts
+  }, [hourlyAverages]);
 
-    // Sort based on selected order
+  // Sorted hourly data for table display
+  const hourlyData: HourlyDataPoint[] = useMemo(() => {
+    if (!hourlyDataChronological.length) return [];
+    
+    const data = [...hourlyDataChronological];
+
+    // Sort based on selected order for table display
     switch (sortOrder) {
       case 'newest':
-        data = data.sort((a, b) => b.hour.localeCompare(a.hour));
+        data.sort((a, b) => b.hour.localeCompare(a.hour));
         break;
       case 'oldest':
-        data = data.sort((a, b) => a.hour.localeCompare(b.hour));
+        // Already in chronological order
         break;
       case 'highest':
-        data = data.sort((a, b) => b.aqi - a.aqi);
+        data.sort((a, b) => b.aqi - a.aqi);
         break;
       case 'lowest':
-        data = data.sort((a, b) => a.aqi - b.aqi);
+        data.sort((a, b) => a.aqi - b.aqi);
         break;
     }
 
     return data;
-  }, [hourlyAverages, sortOrder]);
+  }, [hourlyDataChronological, sortOrder]);
 
   // Process daily trend data
   const trendData: TrendDataPoint[] = useMemo(() => {
@@ -796,9 +803,9 @@ export default function AirQualityComparison({
         {chartType === 'hourly' && (
           <div className="aq-chart">
             <h4>Hourly Air Quality Breakdown</h4>
-            {hourlyData.length > 0 ? (
+            {hourlyDataChronological.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={hourlyData}>
+                <ComposedChart data={hourlyDataChronological}>
                   <defs>
                     <linearGradient id="aqiHourlyGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
@@ -857,7 +864,7 @@ export default function AirQualityComparison({
                   
                   {showPollutantDetails && (
                     <>
-                      {hourlyData.some(d => d.pm25) && (
+                      {hourlyDataChronological.some(d => d.pm25) && (
                         <Line 
                           type="monotone" 
                           dataKey="pm25" 
@@ -867,7 +874,7 @@ export default function AirQualityComparison({
                           name="PM2.5"
                         />
                       )}
-                      {hourlyData.some(d => d.no2) && (
+                      {hourlyDataChronological.some(d => d.no2) && (
                         <Line 
                           type="monotone" 
                           dataKey="no2" 
@@ -880,7 +887,7 @@ export default function AirQualityComparison({
                     </>
                   )}
                   
-                  {hourlyData.length > 12 && (
+                  {hourlyDataChronological.length > 12 && (
                     <Brush 
                       dataKey="displayLabel" 
                       height={30} 
