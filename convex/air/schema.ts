@@ -20,7 +20,8 @@ export default defineSchema({
 
   profiles: defineTable({
     userKey: v.string(),
-    userId: v.optional(v.id("users")),
+    // TEMPORARY: Accept both id and string to allow migration of invalid data
+    userId: v.optional(v.union(v.id("users"), v.string())),
     nickname: v.optional(v.string()),
     homeCity: v.optional(v.string()),
     points: v.number(),
