@@ -31,6 +31,17 @@ export interface ChatRequest {
   location?: { lat: number; lng: number };
   healthProfile?: HealthProfile;
   conversationHistory?: ChatMessage[];
+  // Current air quality data passed from dashboard for consistency
+  currentAirQuality?: {
+    aqi: number;
+    location: string;
+    pm25?: number | null;
+    no2?: number | null;
+    co?: number | null;
+    o3?: number | null;
+    so2?: number | null;
+    source?: string;
+  };
 }
 
 export interface ChatResponse {

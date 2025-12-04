@@ -39,6 +39,7 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import ChatWidget from "@/components/chat/ChatWidget";
 import ChatErrorBoundary from "@/components/chat/ChatErrorBoundary";
 import AirQualityComparison from "@/components/analytics/AirQualityComparison";
+import HealthcareFinder from "@/components/healthcare/HealthcareFinder";
 import Navbar from "@/components/navigation/Navbar";
 import { formatTimeGMT8, formatDateTimeGMT8, formatDuration } from "@/lib/timeUtils";
 
@@ -683,8 +684,23 @@ export default function Home() {
     }
   };
 
+  // Memoize current air quality for chat context
+  const currentAirQualityForChat = useMemo(() => {
+    if (!air) return undefined;
+    return {
+      aqi: air.aqi || 0,
+      location: air.location,
+      pm25: air.pm25,
+      no2: air.no2,
+      co: air.co,
+      o3: air.o3,
+      so2: air.so2,
+      source: air.source,
+    };
+  }, [air]);
+
   return (
-    <ChatProvider>
+    <ChatProvider initialAirQuality={currentAirQualityForChat}>
       <Navbar />
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10 pt-24 md:px-10 lg:px-14">
       <header className="initial-hidden animate-slide-down flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1369,6 +1385,14 @@ export default function Home() {
           />
         </section>
       )}
+
+      {/* Healthcare Finder Section */}
+      <section className="mt-4">
+        <HealthcareFinder
+          lat={coords.lat}
+          lng={coords.lon}
+        />
+      </section>
       </main>
       
       {/* Chat Widget - Outside main for proper fixed positioning */}

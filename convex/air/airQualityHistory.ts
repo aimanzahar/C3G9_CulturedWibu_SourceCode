@@ -316,8 +316,11 @@ export const getHourlyAverages = query({
     }> = {};
     
     readings.forEach((reading) => {
+      // Use GMT+8 timezone (Asia/Kuala_Lumpur) for consistent display
       const date = new Date(reading.timestamp);
-      const hourKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}`;
+      // Get GMT+8 time by adding 8 hours offset
+      const gmt8Date = new Date(reading.timestamp + (8 * 60 * 60 * 1000));
+      const hourKey = `${gmt8Date.getUTCFullYear()}-${String(gmt8Date.getUTCMonth() + 1).padStart(2, '0')}-${String(gmt8Date.getUTCDate()).padStart(2, '0')}T${String(gmt8Date.getUTCHours()).padStart(2, '0')}`;
       
       if (!hourlyData[hourKey]) {
         hourlyData[hourKey] = {
@@ -366,30 +369,36 @@ export const getHourlyAverages = query({
       }
     });
     
-    // Calculate averages and format
+    // Calculate averages and format in GMT+8 timezone
     return Object.values(hourlyData)
-      .map((hour) => ({
-        hour: hour.hour,
-        timestamp: hour.timestamp,
-        displayHour: new Date(hour.timestamp).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: true 
-        }),
-        displayDate: new Date(hour.timestamp).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric' 
-        }),
-        avgAqi: Math.round(hour.totalAqi / hour.readings),
-        minAqi: hour.minAqi === Infinity ? null : hour.minAqi,
-        maxAqi: hour.maxAqi === -Infinity ? null : hour.maxAqi,
-        avgPm25: hour.pm25Count > 0 ? Math.round(hour.totalPm25 / hour.pm25Count) : null,
-        avgNo2: hour.no2Count > 0 ? Math.round((hour.totalNo2 / hour.no2Count) * 10) / 10 : null,
-        avgCo: hour.coCount > 0 ? Math.round((hour.totalCo / hour.coCount) * 100) / 100 : null,
-        avgO3: hour.o3Count > 0 ? Math.round(hour.totalO3 / hour.o3Count) : null,
-        avgSo2: hour.so2Count > 0 ? Math.round(hour.totalSo2 / hour.so2Count) : null,
-        readings: hour.readings,
-      }))
+      .map((hour) => {
+        // Convert to GMT+8 for display
+        const gmt8Date = new Date(hour.timestamp + (8 * 60 * 60 * 1000));
+        return {
+          hour: hour.hour,
+          timestamp: hour.timestamp,
+          displayHour: gmt8Date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'UTC' // Use UTC since we already added GMT+8 offset
+          }),
+          displayDate: gmt8Date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            timeZone: 'UTC' // Use UTC since we already added GMT+8 offset
+          }),
+          avgAqi: Math.round(hour.totalAqi / hour.readings),
+          minAqi: hour.minAqi === Infinity ? null : hour.minAqi,
+          maxAqi: hour.maxAqi === -Infinity ? null : hour.maxAqi,
+          avgPm25: hour.pm25Count > 0 ? Math.round(hour.totalPm25 / hour.pm25Count) : null,
+          avgNo2: hour.no2Count > 0 ? Math.round((hour.totalNo2 / hour.no2Count) * 10) / 10 : null,
+          avgCo: hour.coCount > 0 ? Math.round((hour.totalCo / hour.coCount) * 100) / 100 : null,
+          avgO3: hour.o3Count > 0 ? Math.round(hour.totalO3 / hour.o3Count) : null,
+          avgSo2: hour.so2Count > 0 ? Math.round(hour.totalSo2 / hour.so2Count) : null,
+          readings: hour.readings,
+        };
+      })
       .sort((a, b) => a.timestamp - b.timestamp);
   },
 });

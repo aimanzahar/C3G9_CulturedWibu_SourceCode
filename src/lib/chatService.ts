@@ -252,9 +252,33 @@ Would you like to know about [follow-up suggestion]?"`;
   }
 
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
-    // Fetch air quality data if location is provided
+    // Use provided air quality data from dashboard if available (ensures consistency)
+    // Otherwise fetch from API
     let airQualityData: AirQualityContext | null = null;
-    if (request.location) {
+    
+    if (request.currentAirQuality) {
+      // Use the air quality data passed from dashboard for consistency
+      const riskLevel = request.currentAirQuality.aqi >= 75 ? 'low' : 
+                       request.currentAirQuality.aqi >= 45 ? 'moderate' : 'high';
+      airQualityData = {
+        location: {
+          lat: request.location?.lat || 0,
+          lng: request.location?.lng || 0,
+          name: request.currentAirQuality.location,
+        },
+        aqi: request.currentAirQuality.aqi,
+        riskLevel,
+        pollutants: {
+          pm25: request.currentAirQuality.pm25 || 0,
+          no2: request.currentAirQuality.no2 || 0,
+          co: request.currentAirQuality.co || 0,
+          o3: request.currentAirQuality.o3 || 0,
+          so2: request.currentAirQuality.so2 || 0,
+        },
+        timestamp: new Date(),
+      };
+    } else if (request.location) {
+      // Fallback: fetch air quality if not provided
       airQualityData = await this.fetchAirQuality(request.location.lat, request.location.lng);
     }
 
@@ -521,11 +545,34 @@ Would you like to know about [follow-up suggestion]?"`;
     airQualityData?: AirQualityContext;
     error?: string;
   }, void, unknown> {
-    // Get air quality data - use cache for fast start, fetch in background for cache refresh
+    // Use provided air quality data from dashboard if available (ensures consistency)
     let airQualityData: AirQualityContext | null = null;
     
-    if (request.location) {
-      // First, try to get cached data (non-blocking, instant)
+    if (request.currentAirQuality) {
+      // Use the air quality data passed from dashboard for consistency
+      const riskLevel = request.currentAirQuality.aqi >= 75 ? 'low' : 
+                       request.currentAirQuality.aqi >= 45 ? 'moderate' : 'high';
+      airQualityData = {
+        location: {
+          lat: request.location?.lat || 0,
+          lng: request.location?.lng || 0,
+          name: request.currentAirQuality.location,
+        },
+        aqi: request.currentAirQuality.aqi,
+        riskLevel,
+        pollutants: {
+          pm25: request.currentAirQuality.pm25 || 0,
+          no2: request.currentAirQuality.no2 || 0,
+          co: request.currentAirQuality.co || 0,
+          o3: request.currentAirQuality.o3 || 0,
+          so2: request.currentAirQuality.so2 || 0,
+        },
+        timestamp: new Date(),
+      };
+      // Yield the air quality data immediately
+      yield { type: 'air_quality', airQualityData };
+    } else if (request.location) {
+      // Fallback: try to get cached data (non-blocking, instant)
       airQualityData = this.getCachedAirQuality(request.location.lat, request.location.lng);
       
       if (airQualityData) {
@@ -533,11 +580,8 @@ Would you like to know about [follow-up suggestion]?"`;
         yield { type: 'air_quality', airQualityData };
       } else {
         // Start background fetch to populate cache for next request (fire and forget)
-        // This won't block the stream start
         this.fetchAirQuality(request.location.lat, request.location.lng)
           .then(data => {
-            // Cache is automatically populated by fetchAirQuality
-            // Data will be available for subsequent requests
             if (data) {
               console.log('Air quality data fetched in background for:', request.location);
             }

@@ -167,6 +167,7 @@ const ChatWidget: React.FC = () => {
     isLoading,
     isStreaming,
     error,
+    currentAirQuality,
     openChat,
     closeChat,
     sendMessage,

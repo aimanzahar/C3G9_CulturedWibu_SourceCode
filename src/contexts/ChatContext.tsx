@@ -1,6 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { ChatMessage, HealthProfile, AirQualityContext, ChatResponse } from '@/types/chat';
 
+interface CurrentAirQuality {
+  aqi: number;
+  location: string;
+  pm25?: number | null;
+  no2?: number | null;
+  co?: number | null;
+  o3?: number | null;
+  so2?: number | null;
+  source?: string;
+}
+
 interface ChatContextType {
   messages: ChatMessage[];
   sessionId: string;
@@ -9,10 +20,12 @@ interface ChatContextType {
   isLoading: boolean;
   isStreaming: boolean;
   error: string | null;
+  currentAirQuality: CurrentAirQuality | null;
   openChat: () => void;
   closeChat: () => void;
   sendMessage: (message: string, location?: { lat: number; lng: number }) => Promise<void>;
   updateHealthProfile: (profile: HealthProfile) => void;
+  updateCurrentAirQuality: (data: CurrentAirQuality) => void;
   clearChat: () => void;
   retryLastMessage: () => Promise<void>;
 }
@@ -27,6 +40,7 @@ interface StreamChunk {
 
 interface ChatProviderProps {
   children: ReactNode;
+  initialAirQuality?: CurrentAirQuality;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -47,7 +61,7 @@ const getMessageKey = (messageId: string): string => {
   return `air-quality-chat-message-${messageId}`;
 };
 
-export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
+export const ChatProvider: React.FC<ChatProviderProps> = ({ children, initialAirQuality }) => {
   const [sessionId, setSessionId] = useState<string>(() => {
     if (typeof window === 'undefined') return generateSessionId();
     
@@ -141,6 +155,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [currentAirQuality, setCurrentAirQuality] = useState<CurrentAirQuality | null>(initialAirQuality || null);
+
+  // Update current air quality data (called from dashboard)
+  const updateCurrentAirQuality = useCallback((data: CurrentAirQuality) => {
+    setCurrentAirQuality(data);
+  }, []);
 
   // Function to update a streaming message's content
   const updateStreamingMessage = useCallback((messageId: string, content: string, airQualityData?: AirQualityContext) => {
@@ -288,13 +308,24 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setIsStreaming(true);
 
     try {
-      // Prepare request payload
+      // Prepare request payload with current air quality from dashboard
       const payload = {
         message: message.trim(),
         sessionId,
         location,
         healthProfile: healthProfile || undefined,
         conversationHistory: [...messages, userMessage],
+        // Pass current air quality data from dashboard to ensure consistency
+        currentAirQuality: currentAirQuality ? {
+          aqi: currentAirQuality.aqi,
+          location: currentAirQuality.location,
+          pm25: currentAirQuality.pm25,
+          no2: currentAirQuality.no2,
+          co: currentAirQuality.co,
+          o3: currentAirQuality.o3,
+          so2: currentAirQuality.so2,
+          source: currentAirQuality.source,
+        } : undefined,
       };
 
       // Call streaming chat API
@@ -434,10 +465,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isLoading,
     isStreaming,
     error,
+    currentAirQuality,
     openChat,
     closeChat,
     sendMessage,
     updateHealthProfile,
+    updateCurrentAirQuality,
     clearChat,
     retryLastMessage,
   };
