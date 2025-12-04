@@ -4,13 +4,16 @@ import { ConvexProvider } from "convex/react";
 import { ReactNode } from "react";
 import convex from "@/convexClient";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ConvexErrorBoundary from "@/components/ConvexErrorBoundary";
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <ConvexProvider client={convex}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </ConvexProvider>
+    <ConvexErrorBoundary>
+      <ConvexProvider client={convex}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </ConvexProvider>
+    </ConvexErrorBoundary>
   );
 }
