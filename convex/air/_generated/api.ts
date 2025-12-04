@@ -11,6 +11,7 @@
 import type * as airQualityHistory from "../airQualityHistory.js";
 import type * as auth from "../auth.js";
 import type * as healthProfile from "../healthProfile.js";
+import type * as migrations from "../migrations.js";
 import type * as passport from "../passport.js";
 
 import type {
@@ -24,6 +25,7 @@ const fullApi: ApiFromModules<{
   airQualityHistory: typeof airQualityHistory;
   auth: typeof auth;
   healthProfile: typeof healthProfile;
+  migrations: typeof migrations;
   passport: typeof passport;
 }> = anyApi as any;
 

@@ -11,6 +11,7 @@
 import type * as airHistory from "../airHistory.js";
 import type * as auth from "../auth.js";
 import type * as healthProfile from "../healthProfile.js";
+import type * as migrations from "../migrations.js";
 import type * as passport from "../passport.js";
 
 import type {
@@ -23,6 +24,7 @@ declare const fullApi: ApiFromModules<{
   airHistory: typeof airHistory;
   auth: typeof auth;
   healthProfile: typeof healthProfile;
+  migrations: typeof migrations;
   passport: typeof passport;
 }>;
 
@@ -194,11 +196,19 @@ export declare const components: {
         any
       >;
     };
+    migrations: {
+      fixInvalidUserIds: FunctionReference<"mutation", "internal", {}, any>;
+    };
     passport: {
       ensureProfile: FunctionReference<
         "mutation",
         "internal",
-        { homeCity?: string; nickname?: string; userKey: string },
+        {
+          homeCity?: string;
+          nickname?: string;
+          userId?: string;
+          userKey: string;
+        },
         any
       >;
       getPassport: FunctionReference<

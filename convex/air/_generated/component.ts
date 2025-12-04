@@ -191,11 +191,25 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         Name
       >;
     };
+    migrations: {
+      fixInvalidUserIds: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any,
+        Name
+      >;
+    };
     passport: {
       ensureProfile: FunctionReference<
         "mutation",
         "internal",
-        { homeCity?: string; nickname?: string; userKey: string },
+        {
+          homeCity?: string;
+          nickname?: string;
+          userId?: string;
+          userKey: string;
+        },
         any,
         Name
       >;
